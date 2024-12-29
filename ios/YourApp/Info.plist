@@ -1,0 +1,6 @@
+<key>UIBackgroundModes</key>
+<array>
+    <string>remote-notification</string>
+</array>
+<key>NSUserNotificationsUsageDescription</key>
+<string>We need to send you reminders about your water-saving challenges</string> 

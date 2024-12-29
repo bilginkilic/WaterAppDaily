@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import strings from '../localization/strings';
 import questions from '../data/questions';
+import { StorageService } from '../services';
 
 export const SurveyScreen = ({ navigation }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -20,39 +21,68 @@ export const SurveyScreen = ({ navigation }) => {
     achievements: []
   });
 
-  const handleAnswer = (option) => {
+  const handleAnswer = async (option) => {
     const newAnswers = [...answers, { questionId: questions[currentQuestion].id, answer: option }];
     setAnswers(newAnswers);
 
-    // Sonuçları hesapla
     if (option.valueSaving || option.valueTotal) {
-      setSurveyResults(prev => ({
-        totalSaving: prev.totalSaving + (option.valueSaving || 0),
-        totalUsage: prev.totalUsage + (option.valueTotal || 0),
+      const newResults = {
+        totalSaving: surveyResults.totalSaving + (option.valueSaving || 0),
+        totalUsage: surveyResults.totalUsage + (option.valueTotal || 0),
         tasks: option.type === 'Task' ? [
-          ...prev.tasks, 
-          {
-            text: option.task,
-            category: option.category
+          ...surveyResults.tasks, 
+          { 
+            text: option.task, 
+            category: option.category,
+            date: new Date().toISOString()
           }
-        ] : prev.tasks,
+        ] : surveyResults.tasks,
         achievements: option.type === 'Achievement' ? [
-          ...prev.achievements,
-          {
-            text: option.task,
-            category: option.category
+          ...surveyResults.achievements, 
+          { 
+            text: option.task, 
+            category: option.category,
+            improvement: option.valueSaving || 0,
+            date: new Date().toISOString(),
+            type: 'Achievement'
           }
-        ] : prev.achievements
-      }));
+        ] : surveyResults.achievements
+      };
+      
+      setSurveyResults(newResults);
+      await StorageService.saveSurveyResults(newResults);
+
+      if (option.type === 'Achievement') {
+        const savedAchievements = await StorageService.getAchievements() || [];
+        const newAchievement = {
+          category: option.category,
+          improvement: option.valueSaving || 0,
+          message: option.task,
+          date: new Date().toISOString(),
+          type: 'Achievement'
+        };
+        await StorageService.saveAchievements([...savedAchievements, newAchievement]);
+      }
     }
 
-    // Sonraki soruya geç veya sonuçları göster
     if (currentQuestion + 1 < questions.length) {
       setCurrentQuestion(prev => prev + 1);
     } else {
-      navigation.navigate('SurveyResults', { results: surveyResults });
+      navigation.navigate('SurveyResults', { 
+        results: surveyResults
+      });
     }
   };
+
+  useEffect(() => {
+    const loadPreviousResults = async () => {
+      const previousResults = await StorageService.getSurveyResults();
+      if (previousResults) {
+        setSurveyResults(previousResults);
+      }
+    };
+    loadPreviousResults();
+  }, []);
 
   const currentQ = questions[currentQuestion];
 

@@ -11,14 +11,26 @@ import {
   SafeAreaView,
 } from 'react-native';
 import strings from '../localization/strings';
+import { StorageService } from '../services';
 
 export const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // Gerçek uygulamada burada authentication işlemleri yapılacak
-    navigation.navigate('Main');
+
+    // Kullanıcının mevcut challenge'larını kontrol et
+    const existingProgress = await StorageService.getProgress();
+    const hasExistingChallenges = existingProgress && Object.keys(existingProgress).length > 0;
+
+    if (hasExistingChallenges) {
+      // Eğer mevcut challenge'ları varsa Main ekranına git
+      navigation.replace('Main');
+    } else {
+      // İlk kez giriş yapıyorsa Intro'ya yönlendir
+      navigation.replace('Intro');
+    }
   };
 
   const handleForgotPassword = () => {

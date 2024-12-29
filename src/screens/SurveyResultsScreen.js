@@ -10,11 +10,12 @@ import {
 } from 'react-native';
 import strings from '../localization/strings';
 import { categories, categoryIds } from '../data/categories';
+import { StorageService } from '../services';
 
 const { width } = Dimensions.get('window');
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
-  const { results } = route.params;
+  const { results, onComplete } = route.params;
   
   // Kategori eşleştirme map'i
   const categoryMapping = {
@@ -45,8 +46,17 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   console.log('Improvement Areas:', improvementAreas); // Debug için
 
   const handleStartChallenge = () => {
-    navigation.navigate('Challenges', { 
-      improvementAreas: improvementAreas 
+    // Main ekranına git ve Challenges tab'ini aç
+    navigation.reset({
+      index: 0,
+      routes: [{ 
+        name: 'Main',
+        params: { 
+          improvementAreas: improvementAreas,
+          screen: 'Challenges',
+          isFirstTime: true
+        }
+      }],
     });
   };
 
@@ -103,7 +113,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         {Object.entries(tasksByCategory).map(([category, tasks]) => (
           <View key={category} style={styles.section}>
             <Text style={styles.sectionTitle}>
-              {strings.formatString(strings.improvementArea, category)}
+              {strings.formatString(strings.improvementArea, categories[category]?.title || category)}
             </Text>
             {tasks.map((task, index) => (
               <View key={index} style={styles.taskCard}>
