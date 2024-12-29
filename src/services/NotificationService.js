@@ -101,6 +101,23 @@ class NotificationService {
   cancelAllNotifications() {
     PushNotification.cancelAllLocalNotifications();
   }
+
+  showNotification(title, message, options = {}) {
+    PushNotification.localNotification({
+      channelId: 'water-save-channel',
+      title: title,
+      message: message,
+      bigText: options.bigText || message,
+      subText: options.subText || 'WaterSave',
+      vibrate: options.vibrate !== false,
+      playSound: options.playSound !== false,
+      soundName: options.soundName || 'default',
+      importance: Importance.HIGH,
+      priority: 'high',
+      largeIcon: 'ic_launcher',
+      smallIcon: 'ic_notification',
+    });
+  }
 }
 
 export default new NotificationService(); 

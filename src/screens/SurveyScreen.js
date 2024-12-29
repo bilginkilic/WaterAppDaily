@@ -33,7 +33,7 @@ export const SurveyScreen = ({ navigation }) => {
           ...surveyResults.tasks, 
           { 
             text: option.task, 
-            category: option.category,
+            category: option.category?.toLowerCase(),
             date: new Date().toISOString()
           }
         ] : surveyResults.tasks,
@@ -68,9 +68,33 @@ export const SurveyScreen = ({ navigation }) => {
     if (currentQuestion + 1 < questions.length) {
       setCurrentQuestion(prev => prev + 1);
     } else {
-      navigation.navigate('SurveyResults', { 
-        results: surveyResults
+      handleSurveyComplete();
+    }
+  };
+
+  const handleSurveyComplete = async () => {
+    try {
+      // Anket verilerini kaydet
+      await StorageService.saveInitialSurvey(answers);
+      
+      // Improvement areas'ı hesapla
+      const improvementAreas = answers.tasks.reduce((acc, task) => {
+        if (task?.category && !acc.includes(task.category)) {
+          acc.push(task.category);
+        }
+        return acc;
+      }, []);
+
+      // Sonuç ekranına git
+      navigation.navigate('SurveyResults', {
+        results: {
+          tasks: answers.tasks,
+          totalUsage: calculateTotalUsage(answers),
+          totalSaving: calculatePotentialSaving(answers)
+        }
       });
+    } catch (error) {
+      console.error('Error saving survey:', error);
     }
   };
 

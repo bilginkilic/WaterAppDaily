@@ -8,10 +8,31 @@ import { ChallengesScreen } from './src/screens/ChallengesScreen';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import NotificationService from './src/services/NotificationService';
 import { IntroScreen } from './src/screens/IntroScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import strings from './src/localization/strings';
 
 const Stack = createNativeStackNavigator();
 
 function App() {
+  useEffect(() => {
+    const initializeLanguage = async () => {
+      try {
+        const savedLanguage = await AsyncStorage.getItem('userLanguage');
+        if (savedLanguage) {
+          strings.setLanguage(savedLanguage);
+        } else {
+          strings.setLanguage('en');
+          await AsyncStorage.setItem('userLanguage', 'en');
+        }
+      } catch (error) {
+        console.error('Language initialization error:', error);
+        strings.setLanguage('en');
+      }
+    };
+
+    initializeLanguage();
+  }, []);
+
   useEffect(() => {
     // Günlük hatırlatmaları başlat
     NotificationService.scheduleReminderNotification(10, 0); // Sabah 10:00

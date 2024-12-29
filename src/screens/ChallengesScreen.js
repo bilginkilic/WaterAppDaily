@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -63,7 +63,7 @@ const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
   );
 };
 
-export const ChallengesScreen = ({ route, navigation }) => {
+export const ChallengesScreen = ({ route }) => {
   const { improvementAreas = [] } = route.params || {};
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -73,20 +73,66 @@ export const ChallengesScreen = ({ route, navigation }) => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialContent, setTutorialContent] = useState(null);
   const [dailyTasks, setDailyTasks] = useState([]);
-  const [improvementTips, setImprovementTips] = useState([]);
 
-  // Kategoriye göre ilgili soruyu bul
-  const findQuestionForCategory = (categoryId) => {
-    return questions.find(q => q.category === categoryId);
-  };
+  // Tek bir useEffect ile tüm veriyi yükle
+  useEffect(() => {
+    let isMounted = true; // Component mount durumunu takip et
 
-  const handleCategoryPress = (category) => {
-    // Modal'ı sıfırla
+    const loadData = async () => {
+      try {
+        // Başarıları yükle
+        const savedAchievements = await StorageService.getAchievements() || [];
+        const savedProgress = await StorageService.getProgress() || {};
+
+        if (!isMounted) return; // Component unmount olduysa state güncelleme
+
+        // State'leri güncelle
+        setAchievements(savedAchievements);
+        setProgress(savedProgress);
+
+        // Günlük görevleri hazırla
+        const tasks = [];
+        improvementAreas.forEach(areaId => {
+          const category = categories[areaId];
+          if (category?.tips) {
+            category.tips.forEach(tip => {
+              if (tip.video || tip.additionalInfo) {
+                tasks.push({
+                  id: `${areaId}-${tip.id}`,
+                  title: tip.title,
+                  message: tip.message,
+                  category: areaId,
+                  type: tip.video ? 'video' : 'article',
+                  content: tip,
+                  completed: false
+                });
+              }
+            });
+          }
+        });
+
+        if (!isMounted) return;
+        setDailyTasks(tasks);
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+
+    loadData();
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Boş dependency array - sadece mount olduğunda çalışsın
+
+  // Kategori seçildiğinde
+  const handleCategoryPress = useCallback((category) => {
     setCurrentQuestion(null);
     setShowQuestionModal(false);
     setShowTutorial(false);
     
-    // Kategoriye ait tamamlanmamış soruları bul
     const categoryQuestions = questions.filter(q => 
       q.category === category.id && !progress[q.id]?.completed
     );
@@ -103,7 +149,12 @@ export const ChallengesScreen = ({ route, navigation }) => {
         [{ text: strings.ok }]
       );
     }
-  };
+  }, [progress]);
+
+  // Görev tamamlandığında
+  const handleTaskCompletion = useCallback((task) => {
+    handleTutorial(task.content);
+  }, []);
 
   const handleAnswer = async (option) => {
     const previousAnswer = progress[currentQuestion.id];
@@ -155,39 +206,27 @@ export const ChallengesScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleTutorial = async (content) => {
+  const handleTutorial = (content) => {
+    if (!content) return;
+    
     setTutorialContent(content);
     
-    // Yeni bir achievement olarak kaydet
-    const newAchievement = {
-      category: currentQuestion.category,
-      improvement: 0, // Su tasarrufu yok ama öğrenme var
-      message: content.video.includes('youtube.com') ? 
-        strings.watchedTutorial : strings.readArticle,
-      date: new Date().toISOString(),
-      type: 'Learning'
-    };
-
-    const newAchievements = [...achievements, newAchievement];
-    setAchievements(newAchievements);
-    await StorageService.saveAchievements(newAchievements);
-    
-    // Video veya makaleyi göster
-    const isVideoUrl = content.video.includes('youtube.com') || 
-                      content.video.includes('vimeo.com') ||
-                      content.video.includes('dailymotion.com');
+    const isVideoUrl = content.video?.includes('youtube.com') || 
+                      content.video?.includes('vimeo.com') ||
+                      content.video?.includes('dailymotion.com');
     
     if (isVideoUrl) {
       setShowTutorial(true);
-    } else {
+    } else if (content.video) { // Eğer video URL'i değilse makale linki olarak kabul et
+      Linking.openURL(content.video).catch(err => {
+        console.error('Link açılamadı:', err);
+        Alert.alert(strings.error, strings.videoLoadError);
+      });
+    } else if (content.additionalInfo) {
       Alert.alert(
         strings.learnMore,
         content.additionalInfo,
         [
-          {
-            text: strings.readMore,
-            onPress: () => Linking.openURL(content.video)
-          },
           {
             text: strings.close,
             style: 'cancel'
@@ -289,79 +328,29 @@ export const ChallengesScreen = ({ route, navigation }) => {
     </Modal>
   );
 
-  // Günlük görevleri yükle
-  const loadDailyTasks = async () => {
-    const progress = await StorageService.getProgress();
-    const tasks = Object.entries(progress).map(([id, data]) => ({
-      id,
-      ...data,
-      completed: data.completed || false
-    }));
-    setDailyTasks(tasks);
-  };
-
-  // Başlangıçta verileri yükle
-  useEffect(() => {
-    const loadData = async () => {
-      const savedAchievements = await StorageService.getAchievements();
-      const savedProgress = await StorageService.getProgress();
-      
-      if (savedAchievements) setAchievements(savedAchievements);
-      if (savedProgress) setProgress(savedProgress);
-      await loadDailyTasks();
-    };
-    loadData();
-  }, []);
-
-  // Görev tamamlandığında
-  const handleTaskCompletion = async (taskId) => {
-    const updatedTasks = dailyTasks.map(task => 
-      task.id === taskId ? { ...task, completed: true } : task
-    );
-    setDailyTasks(updatedTasks);
-    
-    // Progress'i güncelle
-    const newProgress = { ...progress };
-    if (newProgress[taskId]) {
-      newProgress[taskId].completed = true;
-    }
-    await StorageService.saveProgress(newProgress);
-    setProgress(newProgress);
-
-    // Tamamlanmamış görevleri kontrol et ve bildirim gönder
-    const remainingTasks = updatedTasks.filter(task => !task.completed).length;
-    if (remainingTasks > 0) {
-      NotificationService.scheduleChallengeReminder(remainingTasks);
-    }
-  };
-
-  // Görevleri render et
+  // Günlük görevleri render et
   const renderDailyTasks = () => (
     <View style={styles.tasksContainer}>
       <Text style={styles.sectionTitle}>{strings.dailyTasks}</Text>
       {dailyTasks.map((task, index) => (
         <TouchableOpacity
           key={index}
-          style={[
-            styles.taskCard,
-            task.completed && styles.taskCardCompleted
-          ]}
-          onPress={() => !task.completed && handleTaskCompletion(task.id)}
+          style={[styles.taskCard, task.completed && styles.taskCardCompleted]}
+          onPress={() => !task.completed && handleTaskCompletion(task)}
         >
           <View style={styles.taskContent}>
-            <Text style={[
-              styles.taskText,
-              task.completed && styles.taskTextCompleted
-            ]}>
-              {task.text}
-            </Text>
-            {task.completed && (
-              <MaterialCommunityIcons 
-                name="check-circle" 
-                size={24} 
-                color="#4CAF50" 
-              />
-            )}
+            <MaterialCommunityIcons 
+              name={task.type === 'video' ? 'play-circle' : 'book-open-variant'} 
+              size={24} 
+              color={task.completed ? '#4CAF50' : '#2196F3'} 
+              style={styles.taskIcon}
+            />
+            <View style={styles.taskTextContainer}>
+              <Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>
+                {task.title}
+              </Text>
+              <Text style={styles.taskMessage}>{task.message}</Text>
+            </View>
           </View>
         </TouchableOpacity>
       ))}
@@ -372,66 +361,59 @@ export const ChallengesScreen = ({ route, navigation }) => {
     console.log('Active categories:', improvementAreas);
   }, [improvementAreas]);
 
-  useEffect(() => {
-    if (improvementAreas.length > 0) {
-      // Her improvement area için ilgili soruları ve ipuçlarını getir
-      const tips = improvementAreas.map(areaId => {
-        const categoryEntry = Object.entries(categories).find(([_, cat]) => cat.id === areaId);
-        const category = categoryEntry ? categories[categoryEntry[0]] : null;
-        
-        const categoryQuestions = questions.filter(q => q.category === areaId);
-        return {
-          id: areaId,
-          title: category?.title || '',
-          color: category?.color || '#2196F3',
-          icon: category?.icon,
-          tips: categoryQuestions.map(q => ({
-            id: q.id,
-            title: q.text,
-            message: q.content?.message || '',
-            video: q.content?.video || '',
-            additionalInfo: q.content?.additionalInfo || ''
-          }))
-        };
-      });
-      setImprovementTips(tips);
-    }
-  }, [improvementAreas]); // Sadece improvementAreas değiştiğinde çalışsın
-
   const renderImprovementTips = () => (
     <View style={styles.tipsContainer}>
       <Text style={styles.sectionTitle}>{strings.improvementTips}</Text>
-      {improvementTips.map((area) => (
-        <View key={area.id} style={styles.areaContainer}>
-          <View style={[styles.areaHeader, { backgroundColor: area.color }]}>
-            <area.icon width={24} height={24} color="#FFF" />
-            <Text style={styles.areaTitle}>{area.title}</Text>
-          </View>
-          {area.tips.map((tip, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.tipCard}
-              onPress={() => handleTutorial(tip)}
-            >
-              <View style={styles.tipContent}>
-                <Text style={styles.tipTitle}>{tip.title}</Text>
-                <Text style={styles.tipMessage} numberOfLines={2}>
-                  {tip.message}
-                </Text>
-              </View>
-              {tip.video && (
-                <MaterialCommunityIcons 
-                  name={tip.video.includes('youtube.com') ? 'youtube' : 'text-box'}
-                  size={24} 
-                  color="#666"
+      {improvementAreas.map((areaId) => {
+        const category = categories[areaId];
+        if (!category) return null;
+
+        return (
+          <View key={areaId} style={styles.areaContainer}>
+            <View style={[styles.areaHeader, { backgroundColor: category.color }]}>
+              <category.icon width={24} height={24} color="#FFF" />
+              <Text style={styles.areaTitle}>{category.title}</Text>
+            </View>
+            {category.tips?.map((tip, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.tipCard}
+                onPress={() => handleTutorial(tip)}
+              >
+                <View style={styles.tipContent}>
+                  <Text style={styles.tipTitle}>{tip.title}</Text>
+                  <Text style={styles.tipMessage}>{tip.message}</Text>
+                </View>
+                <MaterialCommunityIcons
+                  name={tip.video ? "play-circle" : "book-open-variant"}
+                  size={24}
+                  color="#2196F3"
                 />
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
-      ))}
+              </TouchableOpacity>
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
+
+  useEffect(() => {
+    const checkAllCompleted = async () => {
+      const savedProgress = await StorageService.getProgress() || {};
+      const allTasks = Object.values(savedProgress);
+      const completedTasks = allTasks.filter(task => task.completed);
+      
+      if (allTasks.length > 0 && allTasks.length === completedTasks.length) {
+        Alert.alert(
+          '🎉 ' + strings.allTasksCompleted,
+          strings.allTasksCompletedMessage,
+          [{ text: strings.ok }]
+        );
+      }
+    };
+
+    checkAllCompleted();
+  }, [progress]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -441,58 +423,22 @@ export const ChallengesScreen = ({ route, navigation }) => {
           <Text style={styles.subtitle}>{strings.challengeDescription}</Text>
         </View>
 
-        {/* İyileştirme İpuçları */}
-        {improvementTips.length > 0 && renderImprovementTips()}
+        {/* Kategoriler */}
+        <View style={styles.categoriesContainer}>
+          <Text style={styles.sectionTitle}>{strings.categories}</Text>
+          {Object.values(categories).map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              isActive={improvementAreas.includes(category.id)}
+              hasQuestions={getCategoryQuestionCount(category.id) > 0}
+              onPress={() => handleCategoryPress(category)}
+            />
+          ))}
+        </View>
 
         {/* Günlük Görevler */}
         {dailyTasks.length > 0 && renderDailyTasks()}
-
-        {achievements.length > 0 && (
-          <View style={styles.achievementsContainer}>
-            <Text style={styles.sectionTitle}>{strings.recentAchievements}</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.achievementsScroll}
-            >
-              {achievements.map((achievement, index) => (
-                <View key={index} style={styles.achievementCard}>
-                  <Text style={styles.achievementValue}>
-                    {achievement.improvement}L
-                  </Text>
-                  <Text style={styles.achievementTitle}>
-                    {achievement.category}
-                  </Text>
-                  <Text style={styles.achievementMessage}>
-                    {achievement.message}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        <View style={styles.categoriesContainer}>
-          <Text style={styles.sectionTitle}>{strings.categories}</Text>
-          {Object.values(categories).map(category => {
-            const isActive = improvementAreas.includes(category.id);
-            const hasQuestions = questions.some(q => q.category === category.id);
-            
-            return (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                isActive={isActive}
-                hasQuestions={hasQuestions}
-                onPress={() => {
-                  if (isActive && hasQuestions) {
-                    handleCategoryPress(category);
-                  }
-                }}
-              />
-            );
-          })}
-        </View>
 
         {renderQuestionModal()}
         {renderTutorialModal()}
@@ -687,7 +633,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   categoriesContainer: {
-    marginTop: 24,
+    marginBottom: 24,
   },
   modalContainer: {
     flex: 1,
@@ -817,7 +763,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   tipsContainer: {
-    marginTop: 20,
+    marginTop: 8,
   },
   areaContainer: {
     marginBottom: 20,
@@ -847,10 +793,11 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: '#E3F2FD',
+    backgroundColor: '#FFF',
   },
   tipContent: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 16,
   },
   tipTitle: {
     fontSize: 16,
@@ -861,5 +808,26 @@ const styles = StyleSheet.create({
   tipMessage: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 20,
+  },
+  taskIcon: {
+    marginRight: 12,
+  },
+  taskTextContainer: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 4,
+  },
+  taskTitleCompleted: {
+    color: '#4CAF50',
+  },
+  taskMessage: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
 }); 

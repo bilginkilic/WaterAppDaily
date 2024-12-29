@@ -9,11 +9,14 @@ import {
   Dimensions,
   Animated,
   Modal,
+  TextInput,
 } from 'react-native';
 import strings from '../localization/strings';
 import { LineChart } from 'react-native-chart-kit';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { StorageService } from '../services';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NotificationService from '../services/NotificationService';
 
 const RestartDialog = ({ visible, onClose, onConfirm }) => (
   <Modal
@@ -45,31 +48,82 @@ const RestartDialog = ({ visible, onClose, onConfirm }) => (
   </Modal>
 );
 
-export const ProfileScreen = ({ navigation }) => {
+export const ProfileScreen = ({ route, navigation }) => {
+  const params = route.params || {};
+  const improvementAreas = params.improvementAreas || [];
+
+  console.log('ProfileScreen - Route Params:', route.params);
+  console.log('ProfileScreen - Improvement Areas:', improvementAreas);
+
+  const maxChallenges = 2;
+  
   const [pastChallenges, setPastChallenges] = useState([]);
   const [totalSavings, setTotalSavings] = useState(0);
   const [showRestartDialog, setShowRestartDialog] = useState(false);
-  const [learningStats, setLearningStats] = useState({
-    videos: 0,
-    articles: 0
-  });
+  const [learningStats, setLearningStats] = useState({ videos: 0, articles: 0 });
   const [activeChallenges, setActiveChallenges] = useState(0);
-  const maxChallenges = 2; // Maximum izin verilen challenge sayısı
+  const [currentLanguage, setCurrentLanguage] = useState('');
+  const [stats, setStats] = useState({ completed: 0, active: 0, successRate: 0 });
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [dailySavings, setDailySavings] = useState({
+    labels: [],
+    data: []
+  });
+  const [waterFootprint, setWaterFootprint] = useState({
+    initial: 0,
+    current: 0
+  });
 
   useEffect(() => {
-    loadData();
+    if (currentLanguage) {
+      loadData();
+    }
+  }, [currentLanguage]);
+
+  useEffect(() => {
+    const initializeScreen = async () => {
+      console.log('Initializing Profile Screen...');
+      await loadLanguage();
+      await loadData();
+    };
+    initializeScreen();
   }, []);
 
-  const loadData = async () => {
-    const savedAchievements = await StorageService.getAchievements();
-    const currentProgress = await StorageService.getProgress();
-    
-    // Aktif challenge sayısını hesapla
-    const activeCount = Object.values(currentProgress || {})
-      .filter(p => !p.completed).length;
-    setActiveChallenges(activeCount);
+  const loadLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem('userLanguage');
+      setCurrentLanguage(savedLanguage || 'en');
+    } catch (error) {
+      console.error('Error loading language:', error);
+      setCurrentLanguage('en');
+    }
+  };
 
-    if (savedAchievements) {
+  const loadData = async () => {
+    try {
+      const savedAchievements = await StorageService.getAchievements() || [];
+      const currentProgress = await StorageService.getProgress() || {};
+      const initialSurvey = await StorageService.getInitialSurvey() || {};
+      
+      // Su ayak izini hesapla
+      const initialFootprint = StorageService.calculateWaterFootprint(initialSurvey);
+      const currentFootprint = initialFootprint - totalSavings;
+      
+      setWaterFootprint({
+        initial: initialFootprint,
+        current: currentFootprint
+      });
+
+      // Günlük tasarrufları hesapla
+      const dailyData = calculateDailySavings(savedAchievements);
+      setDailySavings(dailyData);
+
+      // Aktif challenge sayısını hesapla
+      const activeCount = Object.values(currentProgress)
+        .filter(p => !p.completed).length;
+      setActiveChallenges(activeCount);
+
       setPastChallenges(savedAchievements);
 
       // Toplam tasarrufu hesapla
@@ -92,16 +146,53 @@ export const ProfileScreen = ({ navigation }) => {
 
       // Tamamlanan görevleri hesapla
       const completed = savedAchievements.filter(a => a.type === 'Achievement').length;
-      const active = improvementAreas?.length || 0;
+      const active = improvementAreas.length;
       const successRate = active > 0 ? Math.round((completed / active) * 100) : 0;
 
-      setStats({
-        completed,
-        active,
-        successRate
-      });
+      setStats({ completed, active, successRate });
+
+    } catch (error) {
+      console.error('Error loading data:', error);
     }
   };
+
+  const calculateDailySavings = (achievements) => {
+    if (!Array.isArray(achievements)) {
+      return { labels: [], data: [] };
+    }
+
+    const dailyMap = {};
+    const today = new Date();
+    
+    // Son 7 günü hazırla
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+      dailyMap[dateKey] = 0;
+    }
+
+    // Başarıları günlere göre topla
+    achievements.forEach(achievement => {
+      if (achievement?.improvement) {
+        const dateKey = new Date(achievement.date).toISOString().split('T')[0];
+        if (dailyMap[dateKey] !== undefined) {
+          dailyMap[dateKey] += achievement.improvement;
+        }
+      }
+    });
+
+    // Grafik için verileri hazırla
+    return {
+      labels: Object.keys(dailyMap).map(date => date.split('-')[2]), // Sadece günü göster
+      data: Object.values(dailyMap)
+    };
+  };
+
+  // Debug için log ekleyelim
+  useEffect(() => {
+    console.log('Improvement Areas in Profile:', improvementAreas);
+  }, [improvementAreas]);
 
   const calculateWeeklyData = (achievements) => {
     const weeks = {};
@@ -219,6 +310,99 @@ export const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  // Dil yükleme - sadece bir kez çalışacak
+  useEffect(() => {
+    const loadInitialLanguage = async () => {
+      try {
+        const savedLanguage = await AsyncStorage.getItem('userLanguage');
+        if (savedLanguage) {
+          setCurrentLanguage(savedLanguage);
+        } else {
+          setCurrentLanguage('en'); // Varsayılan dil
+        }
+      } catch (error) {
+        console.error('Error loading language:', error);
+        setCurrentLanguage('en');
+      }
+    };
+
+    loadInitialLanguage();
+  }, []); // Boş dependency array
+
+  // Dil değiştirme fonksiyonu
+  const handleLanguageChange = async (newLanguage) => {
+    if (newLanguage === currentLanguage) return;
+
+    try {
+      await AsyncStorage.setItem('userLanguage', newLanguage);
+      strings.setLanguage(newLanguage);
+      setCurrentLanguage(newLanguage);
+
+      // Dil değişikliğini bildir
+      Alert.alert(
+        strings.languageChanged,
+        strings.languageChangeMessage,
+        [{ 
+          text: strings.ok,
+          onPress: () => {
+            // Main navigator üzerinden Profile tab'ine git
+            navigation.reset({
+              index: 0,
+              routes: [{ 
+                name: 'Main',
+                params: { 
+                  screen: 'Profile',
+                  improvementAreas: improvementAreas 
+                }
+              }],
+            });
+          }
+        }]
+      );
+
+    } catch (error) {
+      console.error('Language change error:', error);
+    }
+  };
+
+  // Test bildirimi gönderme fonksiyonu
+  const sendTestNotification = () => {
+    NotificationService.showNotification(
+      'Test Bildirimi 🚰',
+      'Su tasarrufu yolculuğunuzda yeni bir başarı kazandınız! 💧',
+      {
+        bigText: 'Bu bir test bildirimidir. Gerçek bildirimler su tasarrufu başarılarınızı ve günlük hatırlatmaları içerecektir.',
+        subText: 'WaterSave',
+        vibrate: true,
+        playSound: true,
+      }
+    );
+  };
+
+  const handleSendFeedback = async () => {
+    if (!feedback.trim()) return;
+
+    try {
+      // Burada gerçek bir API çağrısı yapılabilir
+      // Şimdilik sadece simüle ediyoruz
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      Alert.alert(
+        strings.feedbackSuccess,
+        '',
+        [{ 
+          text: strings.ok,
+          onPress: () => {
+            setFeedback('');
+            setShowFeedbackModal(false);
+          }
+        }]
+      );
+    } catch (error) {
+      Alert.alert(strings.feedbackError);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       {/* Özet Kartı */}
@@ -231,27 +415,67 @@ export const ProfileScreen = ({ navigation }) => {
       </View>
 
       {/* Challenge Limiti Bilgisi */}
-      <View style={styles.limitCard}>
-        <MaterialCommunityIcons name="information" size={24} color="#1976D2" />
-        <Text style={styles.limitText}>
-          {strings.formatString(strings.challengeLimit, activeChallenges, maxChallenges)}
+      {maxChallenges && (
+        <View style={styles.limitCard}>
+          <MaterialCommunityIcons name="information" size={24} color="#1976D2" />
+          <Text style={styles.limitText}>
+            {strings.formatString(strings.challengeLimit, activeChallenges, maxChallenges)}
+          </Text>
+        </View>
+      )}
+
+      {/* Su Ayak İzi Kartı */}
+      <View style={styles.footprintCard}>
+        <Text style={styles.sectionTitle}>{strings.waterFootprint}</Text>
+        <View style={styles.footprintComparison}>
+          <View style={styles.footprintItem}>
+            <Text style={styles.footprintLabel}>{strings.initialFootprint}</Text>
+            <Text style={styles.footprintValue}>{waterFootprint.initial}L</Text>
+          </View>
+          <MaterialCommunityIcons name="arrow-right" size={24} color="#666" />
+          <View style={styles.footprintItem}>
+            <Text style={styles.footprintLabel}>{strings.currentFootprint}</Text>
+            <Text style={[
+              styles.footprintValue,
+              { color: waterFootprint.current < waterFootprint.initial ? '#4CAF50' : '#F44336' }
+            ]}>{waterFootprint.current}L</Text>
+          </View>
+        </View>
+        <Text style={styles.footprintImprovement}>
+          {waterFootprint.initial - waterFootprint.current > 0 
+            ? strings.formatString(strings.footprintImprovement, waterFootprint.initial - waterFootprint.current)
+            : strings.noImprovement}
         </Text>
       </View>
 
-      {/* İstatistikler */}
-      <View style={styles.statsContainer}>
-        <Text style={styles.sectionTitle}>{strings.progressOverTime}</Text>
-        {pastChallenges.length > 0 ? (
+      {/* Günlük İlerleme Grafiği */}
+      <View style={styles.chartContainer}>
+        <Text style={styles.sectionTitle}>{strings.dailyProgress}</Text>
+        {dailySavings?.data && dailySavings.data.length > 0 && dailySavings.data.some(value => value > 0) ? (
           <LineChart
-            data={waterSavingData}
+            data={{
+              labels: dailySavings.labels || [],
+              datasets: [{
+                data: dailySavings.data || []
+              }]
+            }}
             width={Dimensions.get('window').width - 40}
             height={220}
             chartConfig={{
-              backgroundColor: '#FFFFFF',
-              backgroundGradientFrom: '#FFFFFF',
-              backgroundGradientTo: '#FFFFFF',
+              backgroundColor: '#FFF',
+              backgroundGradientFrom: '#FFF',
+              backgroundGradientTo: '#FFF',
               decimalPlaces: 0,
               color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+              style: {
+                borderRadius: 16
+              },
+              propsForDots: {
+                r: '6',
+                strokeWidth: '2',
+                stroke: '#2196F3'
+              }
             }}
             bezier
             style={styles.chart}
@@ -366,6 +590,93 @@ export const ProfileScreen = ({ navigation }) => {
         <MaterialCommunityIcons name="logout" size={24} color="#666" />
         <Text style={styles.signOutButtonText}>{strings.signOut}</Text>
       </TouchableOpacity>
+
+      {/* Dil Seçimi */}
+      <View style={styles.languageSection}>
+        <Text style={styles.sectionTitle}>{strings.language}</Text>
+        <View style={styles.languageOptions}>
+          <TouchableOpacity 
+            style={[
+              styles.languageButton,
+              currentLanguage === 'en' && styles.languageButtonActive
+            ]}
+            onPress={() => handleLanguageChange('en')}
+          >
+            <Text style={[
+              styles.languageButtonText,
+              currentLanguage === 'en' && styles.languageButtonTextActive
+            ]}>English</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[
+              styles.languageButton,
+              currentLanguage === 'tr' && styles.languageButtonActive
+            ]}
+            onPress={() => handleLanguageChange('tr')}
+          >
+            <Text style={[
+              styles.languageButtonText,
+              currentLanguage === 'tr' && styles.languageButtonTextActive
+            ]}>Türkçe</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Test Notification Button - Sadece development modunda göster */}
+      {__DEV__ && (
+        <TouchableOpacity 
+          style={[styles.button, styles.testButton]}
+          onPress={sendTestNotification}
+        >
+          <MaterialCommunityIcons name="bell-ring" size={24} color="#1976D2" />
+          <Text style={styles.testButtonText}>Send Test Notification</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Feedback butonu */}
+      <TouchableOpacity 
+        style={[styles.button, styles.feedbackButton]}
+        onPress={() => setShowFeedbackModal(true)}
+      >
+        <MaterialCommunityIcons name="message-text" size={24} color="#1976D2" />
+        <Text style={styles.feedbackButtonText}>{strings.sendFeedback}</Text>
+      </TouchableOpacity>
+
+      {/* Feedback modalı */}
+      <Modal
+        visible={showFeedbackModal}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.feedbackOverlay}>
+          <View style={styles.feedbackContainer}>
+            <Text style={styles.feedbackTitle}>{strings.feedbackTitle}</Text>
+            <TextInput
+              style={styles.feedbackInput}
+              multiline
+              numberOfLines={4}
+              placeholder={strings.feedbackPlaceholder}
+              value={feedback}
+              onChangeText={setFeedback}
+            />
+            <View style={styles.feedbackButtons}>
+              <TouchableOpacity 
+                style={[styles.feedbackButton, styles.cancelButton]}
+                onPress={() => setShowFeedbackModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>{strings.cancel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.feedbackButton, styles.sendButton]}
+                onPress={handleSendFeedback}
+              >
+                <Text style={styles.sendButtonText}>{strings.send}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -635,4 +946,160 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  languageSection: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  languageOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 12,
+  },
+  languageButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#2196F3',
+    backgroundColor: '#FFF',
+  },
+  languageButtonActive: {
+    backgroundColor: '#2196F3',
+  },
+  languageButtonText: {
+    fontSize: 16,
+    color: '#2196F3',
+    fontWeight: '500',
+  },
+  languageButtonTextActive: {
+    color: '#FFF',
+  },
+  testButton: {
+    backgroundColor: '#E3F2FD',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  testButtonText: {
+    color: '#1976D2',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  feedbackOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  feedbackContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  feedbackTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  feedbackInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  feedbackButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  feedbackButton: {
+    flex: 1,
+    marginHorizontal: 8,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  sendButton: {
+    backgroundColor: '#2196F3',
+  },
+  sendButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  feedbackButtonText: {
+    color: '#1976D2',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  footprintCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  footprintComparison: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginVertical: 16,
+  },
+  footprintItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  footprintLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  footprintValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  footprintImprovement: {
+    fontSize: 16,
+    color: '#4CAF50',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  chartContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  }
 }); 

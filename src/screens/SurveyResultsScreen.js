@@ -9,44 +9,33 @@ import {
   Dimensions,
 } from 'react-native';
 import strings from '../localization/strings';
-import { categories, categoryIds } from '../data/categories';
-import { StorageService } from '../services';
+import { categories } from '../data/categories';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
-  const { results, onComplete } = route.params;
+  const { results } = route.params;
   
-  // Kategori eşleştirme map'i
-  const categoryMapping = {
-    'Dishwashing': categoryIds.DISHWASHING,
-    'Shower': categoryIds.SHOWER,
-    'Laundry': categoryIds.LAUNDRY,
-    'Plumbing': categoryIds.PLUMBING,
-    'Daily activities': categoryIds.DAILY,
-    'Car owners': categoryIds.CAR,
-    // Alternatif yazımlar için de eşleştirme ekleyelim
-    'daily-activities': categoryIds.DAILY,
-    'car-owners': categoryIds.CAR,
-    'daily': categoryIds.DAILY,
-    'car': categoryIds.CAR
-  };
-
   // Improvement gereken kategorileri belirle
   const improvementAreas = results.tasks.reduce((acc, task) => {
-    if (task && task.category) {
-      const normalizedCategory = categoryMapping[task.category] || task.category;
-      if (!acc.includes(normalizedCategory)) {
-        acc.push(normalizedCategory);
-      }
+    if (task?.category && !acc.includes(task.category)) {
+      acc.push(task.category);
     }
     return acc;
   }, []);
 
-  console.log('Improvement Areas:', improvementAreas); // Debug için
+  // Debug için log ekleyelim
+  console.log('Categories:', categories);
+  console.log('Improvement Areas:', improvementAreas);
+
+  // Sadece geçerli kategorileri gösterelim
+  const validImprovementAreas = improvementAreas.filter(categoryId => 
+    categories[categoryId] && categories[categoryId].title
+  );
 
   const handleStartChallenge = () => {
-    // Main ekranına git ve Challenges tab'ini aç
+    console.log('Starting challenge with areas:', improvementAreas);
     navigation.reset({
       index: 0,
       routes: [{ 
@@ -60,82 +49,74 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     });
   };
 
-  // Su tasarrufu yüzdesini hesapla
-  const savingPercentage = ((results.totalSaving / results.totalUsage) * 100).toFixed(1);
-  
-  // Kategorilere göre görevleri grupla
-  const tasksByCategory = results.tasks.reduce((acc, task) => {
-    const category = task.category || 'General';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(task);
-    return acc;
-  }, {});
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Başlık ve Özet */}
-        <View style={styles.summaryContainer}>
+        <View style={styles.header}>
+          <View style={styles.confettiContainer}>
+            <MaterialCommunityIcons name="party-popper" size={32} color="#2196F3" />
+          </View>
           <Text style={styles.title}>{strings.surveyComplete}</Text>
-          <Text style={styles.subtitle}>
-            {strings.formatString(strings.waterSavingPotential, savingPercentage)}
+          <View style={styles.savingCard}>
+            <Text style={styles.savingText}>
+              {strings.waterSavingPotential}
+            </Text>
+            <Text style={styles.savingPercentage}>
+              {((results.totalSaving / results.totalUsage) * 100).toFixed(0)}%
+            </Text>
+            <Text style={styles.savingDescription}>
+              {strings.savingPercentageText}
+            </Text>
+            <Text style={styles.savingSubtext}>
+              {strings.formatString(strings.savingEquivalent, '2 days')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Geliştirilmesi Gereken Alanlar */}
+        <View style={styles.areasContainer}>
+          <Text style={styles.sectionTitle}>{strings.improvementAreas}</Text>
+          <Text style={styles.explanationText}>
+            {strings.formatString(strings.areasExplanation, validImprovementAreas.length)}
+          </Text>
+          {validImprovementAreas.map((categoryId) => (
+            <View key={categoryId} style={styles.categoryCard}>
+              <View style={[styles.categoryIcon, { backgroundColor: categories[categoryId].color }]}>
+                <MaterialCommunityIcons 
+                  name={categories[categoryId].icon || 'water'} 
+                  size={24} 
+                  color="#FFF" 
+                />
+              </View>
+              <View style={styles.categoryContent}>
+                <Text style={styles.categoryTitle}>
+                  {categories[categoryId].title}
+                </Text>
+                <View style={styles.improvementBadge}>
+                  <Text style={styles.improvementText}>{strings.needsImprovement}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Challenge Açıklaması */}
+        <View style={styles.challengeInfoContainer}>
+          <MaterialCommunityIcons name="lightbulb-on" size={24} color="#1976D2" />
+          <Text style={styles.challengeInfoText}>
+            {strings.challengeInfo}
           </Text>
         </View>
-
-        {/* İstatistikler */}
-        <View style={styles.statsContainer}>
-          <View style={[styles.statBox, { backgroundColor: '#E3F2FD' }]}>
-            <Text style={styles.statValue}>{results.totalSaving}L</Text>
-            <Text style={styles.statLabel}>{strings.potentialSaving}</Text>
-          </View>
-          <View style={[styles.statBox, { backgroundColor: '#E1F5FE' }]}>
-            <Text style={styles.statValue}>{results.totalUsage}L</Text>
-            <Text style={styles.statLabel}>{strings.currentUsage}</Text>
-          </View>
-        </View>
-
-        {/* Başarılar */}
-        {results.achievements.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{strings.achievements}</Text>
-            <View style={styles.achievementsContainer}>
-              {results.achievements.map((achievement, index) => (
-                <View key={index} style={styles.achievementCard}>
-                  <Text style={styles.achievementText}>{achievement.text}</Text>
-                  <Text style={styles.achievementCategory}>{achievement.category}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* İyileştirme Alanları */}
-        {Object.entries(tasksByCategory).map(([category, tasks]) => (
-          <View key={category} style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {strings.formatString(strings.improvementArea, categories[category]?.title || category)}
-            </Text>
-            {tasks.map((task, index) => (
-              <View key={index} style={styles.taskCard}>
-                <Text style={styles.taskText}>{task.text}</Text>
-              </View>
-            ))}
-          </View>
-        ))}
 
         {/* Challenge Başlatma */}
-        <View style={styles.challengeContainer}>
-          <Text style={styles.challengeTitle}>{strings.readyForChallenge}</Text>
-          <Text style={styles.challengeDescription}>
-            {strings.challengeDescription}
-          </Text>
-          <TouchableOpacity 
-            style={styles.startChallengeButton}
-            onPress={handleStartChallenge}
-          >
-            <Text style={styles.buttonText}>{strings.startChallenge}</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={styles.startButton}
+          onPress={handleStartChallenge}
+        >
+          <MaterialCommunityIcons name="flag-checkered" size={24} color="#FFF" style={styles.buttonIcon} />
+          <Text style={styles.startButtonText}>{strings.startChallenge}</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -149,119 +130,150 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
-  summaryContainer: {
+  header: {
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2196F3',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 32,
   },
-  statBox: {
-    width: width * 0.42,
-    padding: 16,
-    borderRadius: 12,
+  confettiContainer: {
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  savingCard: {
+    backgroundColor: '#E3F2FD',
+    padding: 20,
+    borderRadius: 16,
+    width: '100%',
     alignItems: 'center',
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
-  statValue: {
-    fontSize: 24,
+  savingPercentage: {
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#2196F3',
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  statLabel: {
+  savingText: {
+    fontSize: 16,
+    color: '#1976D2',
+    textAlign: 'center',
+  },
+  savingDescription: {
     fontSize: 14,
-    color: '#666',
+    color: '#1976D2',
+    textAlign: 'center',
+    marginTop: 4,
   },
-  section: {
-    marginBottom: 24,
+  savingSubtext: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  areasContainer: {
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#333',
     marginBottom: 12,
   },
-  achievementsContainer: {
-    gap: 12,
-  },
-  achievementCard: {
-    backgroundColor: '#E8F5E9',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
-  },
-  achievementText: {
+  explanationText: {
     fontSize: 16,
-    color: '#2E7D32',
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 24,
   },
-  taskCard: {
-    backgroundColor: '#FFF3E0',
+  categoryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
     padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  categoryIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  categoryContent: {
+    flex: 1,
+  },
+  categoryTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  improvementBadge: {
+    backgroundColor: '#FFE0B2',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 12,
-    marginBottom: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
+    alignSelf: 'flex-start',
   },
-  taskText: {
-    fontSize: 16,
-    color: '#E65100',
+  improvementText: {
+    color: '#F57C00',
+    fontSize: 12,
+    fontWeight: '500',
   },
-  challengeContainer: {
+  challengeInfoContainer: {
+    flexDirection: 'row',
     backgroundColor: '#E3F2FD',
     padding: 20,
     borderRadius: 16,
-    marginTop: 16,
-  },
-  challengeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1976D2',
-    marginBottom: 8,
-  },
-  challengeDescription: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 16,
-    lineHeight: 22,
-  },
-  startChallengeButton: {
-    backgroundColor: '#2196F3',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    marginBottom: 24,
+    alignItems: 'flex-start',
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  buttonText: {
+  challengeInfoText: {
+    flex: 1,
+    marginLeft: 16,
+    fontSize: 16,
+    color: '#1976D2',
+    lineHeight: 24,
+  },
+  startButton: {
+    backgroundColor: '#2196F3',
+    padding: 20,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  buttonIcon: {
+    marginRight: 12,
+  },
+  startButtonText: {
     color: '#FFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  achievementCategory: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginTop: 4,
+    fontSize: 20,
+    fontWeight: '700',
   },
 }); 
