@@ -12,12 +12,21 @@ const config = {
   resolver: {
     nodeModulesPaths: [path.resolve(__dirname, 'node_modules')]
   },
-  watcher: {
-    watchman: {
-      crawlSymlinks: false
+  server: {
+    port: 8081,
+    enhanceMiddleware: (middleware) => {
+      return middleware;
     }
   },
-  maxWorkers: 2
+  maxWorkers: 2,
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
 };
 
 module.exports = mergeConfig(getDefaultConfig(__dirname), config);

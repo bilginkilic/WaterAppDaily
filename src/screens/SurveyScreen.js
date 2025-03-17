@@ -77,8 +77,22 @@ export const SurveyScreen = ({ navigation }) => {
       // Anket verilerini kaydet
       await StorageService.saveInitialSurvey(answers);
       
+      // Toplam kullanım ve tasarruf potansiyelini hesapla
+      const totals = answers.reduce((acc, answer) => {
+        const option = answer.answer;
+        return {
+          totalUsage: acc.totalUsage + (option.valueTotal || 0),
+          totalSaving: acc.totalSaving + (option.valueSaving || 0),
+          tasks: option.type === 'Task' ? [...acc.tasks, {
+            text: option.task,
+            category: option.category?.toLowerCase(),
+            date: new Date().toISOString()
+          }] : acc.tasks
+        };
+      }, { totalUsage: 0, totalSaving: 0, tasks: [] });
+
       // Improvement areas'ı hesapla
-      const improvementAreas = answers.tasks.reduce((acc, task) => {
+      const improvementAreas = totals.tasks.reduce((acc, task) => {
         if (task?.category && !acc.includes(task.category)) {
           acc.push(task.category);
         }
@@ -88,9 +102,10 @@ export const SurveyScreen = ({ navigation }) => {
       // Sonuç ekranına git
       navigation.navigate('SurveyResults', {
         results: {
-          tasks: answers.tasks,
-          totalUsage: calculateTotalUsage(answers),
-          totalSaving: calculatePotentialSaving(answers)
+          tasks: totals.tasks,
+          totalUsage: totals.totalUsage,
+          totalSaving: totals.totalSaving,
+          improvementAreas
         }
       });
     } catch (error) {

@@ -58,6 +58,17 @@ export const StorageService = {
     return results ? JSON.parse(results) : null;
   },
 
+  // Initial survey'i kaydet
+  saveInitialSurvey: async (surveyData) => {
+    await safeStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(surveyData));
+  },
+
+  // Initial survey'i getir
+  getInitialSurvey: async () => {
+    const surveyData = await safeStorage.getItem(STORAGE_KEYS.USER_DATA);
+    return surveyData ? JSON.parse(surveyData) : null;
+  },
+
   // Başarıları kaydet
   saveAchievements: async (achievements) => {
     await safeStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
