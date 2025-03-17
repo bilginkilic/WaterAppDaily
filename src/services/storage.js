@@ -140,4 +140,32 @@ export const StorageService = {
       console.error('Error resetting data:', error);
     }
   },
+
+  calculateWaterFootprint: (surveyData) => {
+    if (!surveyData) return 0;
+
+    let totalUsage = 0;
+
+    // Duş kullanımı
+    if (surveyData.shower) {
+      totalUsage += surveyData.shower * 10; // Her duş için ortalama 10L
+    }
+
+    // Bulaşık yıkama
+    if (surveyData.dishwashing) {
+      totalUsage += surveyData.dishwashing * 15; // Her yıkama için ortalama 15L
+    }
+
+    // Çamaşır yıkama
+    if (surveyData.laundry) {
+      totalUsage += surveyData.laundry * 50; // Her yıkama için ortalama 50L
+    }
+
+    // Günlük kullanım
+    if (surveyData.daily) {
+      totalUsage += surveyData.daily; // Günlük kullanım direkt litre olarak
+    }
+
+    return totalUsage;
+  },
 }; 
