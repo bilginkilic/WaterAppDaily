@@ -8,8 +8,11 @@ import {
   Dimensions,
   TouchableOpacity,
   Image,
+  Modal,
 } from 'react-native';
 import strings from '../localization/strings';
+import { getTutorialVideo, getYoutubeVideoId, getYoutubeEmbedUrl } from '../services/TutorialService';
+import { WebView } from 'react-native-webview';
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +39,11 @@ const slides = [
 
 export const IntroScreen = ({ navigation }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
+
+  const introVideo = getTutorialVideo('intro');
+  const videoId = introVideo ? getYoutubeVideoId(introVideo.url) : null;
+  const embedUrl = videoId ? getYoutubeEmbedUrl(videoId) : null;
 
   const renderSlide = ({ item }) => {
     return (
@@ -59,6 +67,10 @@ export const IntroScreen = ({ navigation }) => {
     navigation.replace('Survey');
   };
 
+  const handleWatchVideo = () => {
+    setShowVideo(true);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -72,6 +84,14 @@ export const IntroScreen = ({ navigation }) => {
           setCurrentSlideIndex(index);
         }}
       />
+
+      {/* Watch Video Button */}
+      <TouchableOpacity
+        style={styles.watchVideoButton}
+        onPress={handleWatchVideo}
+      >
+        <Text style={styles.watchVideoText}>İzle ve Öğren</Text>
+      </TouchableOpacity>
 
       {/* Pagination Dots */}
       <View style={styles.pagination}>
@@ -104,6 +124,34 @@ export const IntroScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Video Modal */}
+      <Modal
+        visible={showVideo}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowVideo(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{introVideo?.title}</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowVideo(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {embedUrl && (
+            <WebView
+              source={{ uri: embedUrl }}
+              style={styles.webview}
+              allowsFullscreenVideo
+              javaScriptEnabled
+            />
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -176,5 +224,46 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  watchVideoButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginHorizontal: 40,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  watchVideoText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1a1a1a',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 24,
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: '#000',
   },
 }); 

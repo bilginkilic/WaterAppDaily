@@ -74,10 +74,8 @@ export const SurveyScreen = ({ navigation }) => {
 
   const handleSurveyComplete = async () => {
     try {
-      // Anket verilerini kaydet
       await StorageService.saveInitialSurvey(answers);
       
-      // Toplam kullanım ve tasarruf potansiyelini hesapla
       const totals = answers.reduce((acc, answer) => {
         const option = answer.answer;
         return {
@@ -91,7 +89,6 @@ export const SurveyScreen = ({ navigation }) => {
         };
       }, { totalUsage: 0, totalSaving: 0, tasks: [] });
 
-      // Improvement areas'ı hesapla
       const improvementAreas = totals.tasks.reduce((acc, task) => {
         if (task?.category && !acc.includes(task.category)) {
           acc.push(task.category);
@@ -99,7 +96,6 @@ export const SurveyScreen = ({ navigation }) => {
         return acc;
       }, []);
 
-      // Sonuç ekranına git
       navigation.navigate('SurveyResults', {
         results: {
           tasks: totals.tasks,

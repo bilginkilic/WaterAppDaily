@@ -14,6 +14,13 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 
 const { width } = Dimensions.get('window');
 
+const formatWaterVolume = (liters) => {
+  if (liters >= 1000) {
+    return `${(liters / 1000).toFixed(1)} m³`;
+  }
+  return `${Math.round(liters)} L`;
+};
+
 export const SurveyResultsScreen = ({ route, navigation }) => {
   const { results } = route.params;
   
@@ -49,6 +56,14 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     });
   };
 
+  // Su tüketim ve tasarruf değerlerini hesapla
+  const dailyUsage = results.totalUsage;
+  const potentialSaving = results.totalSaving;
+  const savingPercentage = Math.min(Math.round((potentialSaving / dailyUsage) * 100), 100);
+  
+  // Yıllık tasarruf potansiyelini hesapla
+  const yearlyPotentialSaving = potentialSaving * 365;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -58,27 +73,27 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
             <MaterialCommunityIcons name="party-popper" size={32} color="#2196F3" />
           </View>
           <Text style={styles.title}>{strings.surveyComplete}</Text>
-          <View style={styles.savingCard}>
-            <Text style={styles.savingText}>
-              {strings.waterSavingPotential}
-            </Text>
-            <Text style={styles.savingPercentage}>
-              {((results.totalSaving / results.totalUsage) * 100).toFixed(0)}%
-            </Text>
-            <Text style={styles.savingDescription}>
-              {strings.savingPercentageText}
-            </Text>
-            <Text style={styles.savingSubtext}>
-              {strings.formatString(strings.savingEquivalent, '2 days')}
-            </Text>
+        </View>
+
+        {/* Su Tüketim Özeti */}
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Günlük Su Tüketiminiz</Text>
+          <Text style={styles.usageAmount}>{formatWaterVolume(dailyUsage)}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.savingTitle}>Tasarruf Potansiyeli</Text>
+          <Text style={styles.savingAmount}>{formatWaterVolume(potentialSaving)}</Text>
+          <Text style={styles.savingPerDay}>günlük</Text>
+          <View style={styles.yearlyContainer}>
+            <Text style={styles.yearlyLabel}>Yıllık potansiyel tasarruf:</Text>
+            <Text style={styles.yearlyAmount}>{formatWaterVolume(yearlyPotentialSaving)}</Text>
           </View>
         </View>
 
         {/* Geliştirilmesi Gereken Alanlar */}
         <View style={styles.areasContainer}>
-          <Text style={styles.sectionTitle}>{strings.improvementAreas}</Text>
+          <Text style={styles.sectionTitle}>İyileştirme Alanları</Text>
           <Text style={styles.explanationText}>
-            {strings.formatString(strings.areasExplanation, validImprovementAreas.length)}
+            Aşağıdaki alanlarda yapacağınız değişikliklerle su tüketiminizi azaltabilirsiniz:
           </Text>
           {validImprovementAreas.map((categoryId) => (
             <View key={categoryId} style={styles.categoryCard}>
@@ -93,9 +108,9 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
                 <Text style={styles.categoryTitle}>
                   {categories[categoryId].title}
                 </Text>
-                <View style={styles.improvementBadge}>
-                  <Text style={styles.improvementText}>{strings.needsImprovement}</Text>
-                </View>
+                <Text style={styles.categoryDescription}>
+                  {categories[categoryId].description}
+                </Text>
               </View>
             </View>
           ))}
@@ -105,7 +120,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         <View style={styles.challengeInfoContainer}>
           <MaterialCommunityIcons name="lightbulb-on" size={24} color="#1976D2" />
           <Text style={styles.challengeInfoText}>
-            {strings.challengeInfo}
+            30 günlük su tasarrufu meydan okumasına katılarak, alışkanlıklarınızı değiştirin
+            ve gerçek tasarruf potansiyelinizi keşfedin.
           </Text>
         </View>
 
@@ -115,7 +131,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           onPress={handleStartChallenge}
         >
           <MaterialCommunityIcons name="flag-checkered" size={24} color="#FFF" style={styles.buttonIcon} />
-          <Text style={styles.startButtonText}>{strings.startChallenge}</Text>
+          <Text style={styles.startButtonText}>Meydan Okumayı Başlat</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -132,7 +148,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   confettiContainer: {
     marginBottom: 16,
@@ -144,39 +160,68 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  savingCard: {
-    backgroundColor: '#E3F2FD',
-    padding: 20,
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    padding: 24,
     borderRadius: 16,
     width: '100%',
     alignItems: 'center',
+    marginBottom: 32,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  savingPercentage: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#2196F3',
+  summaryTitle: {
+    fontSize: 16,
+    color: '#666',
     marginBottom: 8,
   },
-  savingText: {
+  usageAmount: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  divider: {
+    height: 1,
+    width: '80%',
+    backgroundColor: '#E0E0E0',
+    marginVertical: 16,
+  },
+  savingTitle: {
+    fontSize: 18,
+    color: '#4CAF50',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  savingAmount: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  savingPerDay: {
     fontSize: 16,
-    color: '#1976D2',
-    textAlign: 'center',
+    color: '#4CAF50',
+    marginBottom: 16,
   },
-  savingDescription: {
+  yearlyContainer: {
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 8,
+    width: '100%',
+    alignItems: 'center',
+  },
+  yearlyLabel: {
     fontSize: 14,
-    color: '#1976D2',
-    textAlign: 'center',
-    marginTop: 4,
+    color: '#2E7D32',
+    marginBottom: 4,
   },
-  savingSubtext: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+  yearlyAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2E7D32',
   },
   areasContainer: {
     marginBottom: 32,
@@ -223,17 +268,10 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  improvementBadge: {
-    backgroundColor: '#FFE0B2',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  improvementText: {
-    color: '#F57C00',
-    fontSize: 12,
-    fontWeight: '500',
+  categoryDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
   challengeInfoContainer: {
     flexDirection: 'row',
@@ -242,11 +280,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 24,
     alignItems: 'flex-start',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   challengeInfoText: {
     flex: 1,
@@ -257,23 +290,19 @@ const styles = StyleSheet.create({
   },
   startButton: {
     backgroundColor: '#2196F3',
-    padding: 20,
-    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 32,
   },
   buttonIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   startButtonText: {
     color: '#FFF',
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 

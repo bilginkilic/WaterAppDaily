@@ -21,12 +21,15 @@ import { WebView } from 'react-native-webview';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { StorageService, NotificationService } from '../services';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { getTutorialVideo, getYoutubeVideoId, getYoutubeEmbedUrl } from '../services/TutorialService';
 
 const { width } = Dimensions.get('window');
 
 const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
   const questionCount = getCategoryQuestionCount(category.id);
   const maxSavings = getCategoryMaxSavings(category.id);
+
+  const Icon = category.icon;
 
   return (
     <TouchableOpacity
@@ -38,7 +41,7 @@ const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
       disabled={!isActive || !hasQuestions}
     >
       <View style={[styles.categoryIconContainer, { backgroundColor: category.color }]}>
-        <category.icon width={32} height={32} color="#FFFFFF" />
+        <Icon width={32} height={32} color="#FFFFFF" />
       </View>
       <View style={styles.categoryContent}>
         <Text style={styles.categoryTitle}>{category.title}</Text>
@@ -73,6 +76,8 @@ export const ChallengesScreen = ({ route }) => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialContent, setTutorialContent] = useState(null);
   const [dailyTasks, setDailyTasks] = useState([]);
+  const [showCategoryVideo, setShowCategoryVideo] = useState(false);
+  const [currentCategoryVideo, setCurrentCategoryVideo] = useState(null);
 
   // Tek bir useEffect ile tüm veriyi yükle
   useEffect(() => {
@@ -129,6 +134,13 @@ export const ChallengesScreen = ({ route }) => {
 
   // Kategori seçildiğinde
   const handleCategoryPress = useCallback((category) => {
+    const tutorialVideo = getTutorialVideo(category.id);
+    if (tutorialVideo) {
+      setCurrentCategoryVideo(tutorialVideo);
+      setShowCategoryVideo(true);
+      return;
+    }
+
     setCurrentQuestion(null);
     setShowQuestionModal(false);
     setShowTutorial(false);
@@ -157,53 +169,69 @@ export const ChallengesScreen = ({ route }) => {
   }, []);
 
   const handleAnswer = async (option) => {
-    const previousAnswer = progress[currentQuestion.id];
-    
-    if (option.type === 'Achievement') {
-      // Achievement ise kaydet ve kapat
-      if (!previousAnswer || option.valueSaving > previousAnswer.valueSaving) {
-        const newAchievement = {
-          category: currentQuestion.category,
-          improvement: option.valueSaving - (previousAnswer?.valueSaving || 0),
-          message: option.task,
-          date: new Date().toISOString(),
-          type: option.type
-        };
-
-        const newAchievements = [...achievements, newAchievement];
-        setAchievements(newAchievements);
-        await StorageService.saveAchievements(newAchievements);
-      }
-
-      const newProgress = {
-        ...progress,
-        [currentQuestion.id]: {
-          ...option,
-          completed: true,
-          date: new Date().toISOString()
-        }
-      };
-      
-      setProgress(newProgress);
-      await StorageService.saveProgress(newProgress);
+    try {
       setShowQuestionModal(false);
-    } else {
-      // Achievement değilse motivasyon mesajı göster
-      Alert.alert(
-        strings.keepLearning,
-        strings.keepLearningMessage,
-        [
-          {
-            text: strings.watchTutorial,
-            onPress: () => handleTutorial(currentQuestion.content)
-          },
-          {
-            text: strings.close,
-            style: 'cancel'
-          }
-        ]
-      );
+      
+      if (currentQuestion && option) {
+        const updatedProgress = { ...progress };
+        const questionId = currentQuestion.id;
+        
+        updatedProgress[questionId] = {
+          completed: true,
+          answer: option,
+          date: new Date().toISOString()
+        };
+        
+        setProgress(updatedProgress);
+        await StorageService.saveProgress(updatedProgress);
+        
+        // Başarıyı kaydet
+        if (option.improvement) {
+          const achievement = {
+            category: currentQuestion.category,
+            improvement: option.improvement,
+            message: option.achievementMessage || option.text,
+            date: new Date().toISOString()
+          };
+          
+          const achievements = await StorageService.getAchievements() || [];
+          achievements.push(achievement);
+          await StorageService.saveAchievements(achievements);
+        }
+        
+        // Bildirimi planla
+        if (option.reminderDays) {
+          NotificationService.scheduleNotification(
+            questionId,
+            currentQuestion.text,
+            option.reminderMessage || option.text,
+            option.reminderDays
+          );
+        }
+      }
+      
+      // Modal'ı kapatmadan önce kısa bir gecikme ekle
+      setTimeout(() => {
+        setCurrentQuestion(null);
+      }, 100);
+      
+    } catch (error) {
+      console.error('Error saving answer:', error);
+      Alert.alert(strings.error, strings.errorMessage);
     }
+  };
+
+  const handleQuestionPress = (question) => {
+    // Eğer soru zaten tamamlanmışsa ve tekrar açılıyorsa, progress'i kontrol et
+    if (progress[question.id]?.completed) {
+      setCurrentQuestion(question);
+      setShowQuestionModal(true);
+      return;
+    }
+    
+    // Yeni soru için
+    setCurrentQuestion(question);
+    setShowQuestionModal(true);
   };
 
   const handleTutorial = (content) => {
@@ -289,7 +317,7 @@ export const ChallengesScreen = ({ route }) => {
               style={styles.modalCloseButton}
               onPress={() => setShowQuestionModal(false)}
             >
-              <MaterialIcons name="close" size={24} color="#666" />
+              <MaterialCommunityIcons name="close" size={24} color="#666" />
             </TouchableOpacity>
           </View>
 
@@ -415,6 +443,55 @@ export const ChallengesScreen = ({ route }) => {
     checkAllCompleted();
   }, [progress]);
 
+  const renderCategoryVideoModal = () => {
+    if (!currentCategoryVideo) return null;
+
+    const videoId = getYoutubeVideoId(currentCategoryVideo.url);
+    const embedUrl = videoId ? getYoutubeEmbedUrl(videoId) : null;
+
+    return (
+      <Modal
+        visible={showCategoryVideo}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowCategoryVideo(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{currentCategoryVideo.title}</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setShowCategoryVideo(false);
+                setCurrentCategoryVideo(null);
+              }}
+            >
+              <MaterialIcons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {embedUrl && (
+            <WebView
+              source={{ uri: embedUrl }}
+              style={styles.webview}
+              allowsFullscreenVideo
+              javaScriptEnabled
+            />
+          )}
+          <TouchableOpacity
+            style={styles.startChallengeButton}
+            onPress={() => {
+              setShowCategoryVideo(false);
+              setCurrentCategoryVideo(null);
+              handleCategoryPress(categories[currentCategoryVideo.category]);
+            }}
+          >
+            <Text style={styles.startChallengeText}>Görevi Başlat</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -442,6 +519,7 @@ export const ChallengesScreen = ({ route }) => {
 
         {renderQuestionModal()}
         {renderTutorialModal()}
+        {renderCategoryVideoModal()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -637,8 +715,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: '#000',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
@@ -652,12 +729,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E3F2FD',
+    padding: 16,
+    backgroundColor: '#1a1a1a',
   },
   modalCloseButton: {
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
   },
   modalScroll: {
     flex: 1,
@@ -829,5 +907,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  startChallengeButton: {
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    margin: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  startChallengeText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 
