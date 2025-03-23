@@ -7,10 +7,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import strings from '../localization/strings';
 import { categories } from '../data/categories';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -41,23 +43,67 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     categories[categoryId] && categories[categoryId].title
   );
 
-  const handleStartChallenge = () => {
+  const handleStartChallenge = async () => {
     console.log('Starting challenge with areas:', improvementAreas);
     console.log('Valid improvement areas:', validImprovementAreas);
     
-    // Direkt Main ekranına git
-    navigation.reset({
-      index: 0,
-      routes: [
-        {
-          name: 'Main',
-          params: {
-            improvementAreas: validImprovementAreas,
-            screen: 'Challenges'
+    try {
+      // API isteği için veriyi hazırla
+      const answers = results.tasks.map(task => ({
+        questionId: task.id || task.questionId,
+        answer: task.answer,
+        isCorrect: task.isCorrect || false
+      }));
+
+      console.log('Sending initial profile data:', {
+        answers,
+        correctAnswersCount: answers.filter(a => a.isCorrect).length,
+        initialWaterprint: results.totalUsage
+      });
+
+      // İlerleme verilerini oluştur
+      const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/initial-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await AsyncStorage.getItem('userToken')}`,
+        },
+        body: JSON.stringify({
+          answers,
+          correctAnswersCount: answers.filter(a => a.isCorrect).length,
+          initialWaterprint: results.totalUsage
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server error:', errorData);
+        throw new Error(errorData.error || 'İlerleme verileri oluşturulamadı');
+      }
+
+      const data = await response.json();
+      console.log('Initial profile created:', data);
+
+      // Main ekranına git
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'Main',
+            params: {
+              improvementAreas: validImprovementAreas,
+              screen: 'Challenges'
+            }
           }
-        }
-      ]
-    });
+        ]
+      });
+    } catch (error) {
+      console.error('Error creating progress:', error);
+      Alert.alert(
+        'Hata',
+        'İlerleme verileri oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
+      );
+    }
   };
 
   // Su tüketim ve tasarruf değerlerini hesapla
