@@ -59,12 +59,18 @@ export const IntroScreen = ({ navigation }) => {
     if (currentSlideIndex < slides.length - 1) {
       setCurrentSlideIndex(prev => prev + 1);
     } else {
-      navigation.replace('Survey');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Survey' }]
+      });
     }
   };
 
   const handleSkip = () => {
-    navigation.replace('Survey');
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Survey' }]
+    });
   };
 
   const handleWatchVideo = () => {

@@ -96,13 +96,21 @@ export const SurveyScreen = ({ navigation }) => {
         return acc;
       }, []);
 
-      navigation.navigate('SurveyResults', {
-        results: {
-          tasks: totals.tasks,
-          totalUsage: totals.totalUsage,
-          totalSaving: totals.totalSaving,
-          improvementAreas
-        }
+      navigation.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'SurveyResults',
+            params: {
+              results: {
+                tasks: totals.tasks,
+                totalUsage: totals.totalUsage,
+                totalSaving: totals.totalSaving,
+                improvementAreas
+              }
+            }
+          }
+        ]
       });
     } catch (error) {
       console.error('Error saving survey:', error);

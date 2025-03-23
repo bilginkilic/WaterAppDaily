@@ -43,16 +43,20 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
 
   const handleStartChallenge = () => {
     console.log('Starting challenge with areas:', improvementAreas);
+    console.log('Valid improvement areas:', validImprovementAreas);
+    
+    // Direkt Main ekranına git
     navigation.reset({
       index: 0,
-      routes: [{ 
-        name: 'Main',
-        params: { 
-          improvementAreas: improvementAreas,
-          screen: 'Challenges',
-          isFirstTime: true
+      routes: [
+        {
+          name: 'Main',
+          params: {
+            improvementAreas: validImprovementAreas,
+            screen: 'Challenges'
+          }
         }
-      }],
+      ]
     });
   };
 

@@ -8,11 +8,16 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import strings from '../localization/strings';
 import { LineChart } from 'react-native-chart-kit';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { StorageService } from '../services';
+import { useAuth } from '../context/AuthContext';
+
+const API_URL = 'https://waterappdashboard2.onrender.com/api';
 
 const RestartDialog = ({ visible, onClose, onConfirm }) => (
   <Modal
@@ -45,6 +50,7 @@ const RestartDialog = ({ visible, onClose, onConfirm }) => (
 );
 
 export const ProfileScreen = ({ route, navigation }) => {
+  const { user, token, signOut } = useAuth();
   const [showRestartDialog, setShowRestartDialog] = useState(false);
   const [totalSavings, setTotalSavings] = useState(0);
   const [dailySavings, setDailySavings] = useState({
@@ -55,40 +61,73 @@ export const ProfileScreen = ({ route, navigation }) => {
     initial: 0,
     current: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user, token]);
 
   const loadData = async () => {
+    if (!user?.id || !token) {
+      setError('Kullanıcı bilgileri bulunamadı');
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      setIsLoading(true);
+      setError(null);
+
+      // Yerel depolamadan verileri yükle
       const savedAchievements = await StorageService.getAchievements() || [];
       const initialSurvey = await StorageService.getInitialSurvey() || {};
       const surveyResults = await StorageService.getSurveyResults() || {};
       
-      // İlk su ayak izi survey sonucundan al
-      const initialFootprint = surveyResults.totalUsage || 0;
-      
-      // Toplam tasarrufu hesapla
-      const total = savedAchievements.reduce((acc, achievement) => 
-        acc + (achievement.improvement || 0), 0);
-      
-      // Güncel su ayak izi = İlk değer - Toplam tasarruf
-      const currentFootprint = Math.max(0, initialFootprint - total);
-      
-      setWaterFootprint({
-        initial: initialFootprint,
-        current: currentFootprint
+      console.log('Local data loaded:', { savedAchievements, initialSurvey, surveyResults });
+
+      // API'den ilerleme verilerini al
+      const response = await fetch(`${API_URL}/waterprint/progress/${user.id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
 
+      console.log('API Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'İlerleme verileri alınamadı');
+      }
+
+      const progressData = await response.json();
+      console.log('Progress data:', progressData);
+      
+      // Su ayak izi verilerini güncelle
+      const initialWaterprint = progressData.initialWaterprint || surveyResults.totalUsage || 0;
+      const currentWaterprint = progressData.currentWaterprint || Math.max(0, initialWaterprint - totalSavings) || 0;
+
+      setWaterFootprint({
+        initial: initialWaterprint,
+        current: currentWaterprint
+      });
+
+      // Toplam tasarrufu hesapla
+      const total = progressData.waterprintReduction || 
+        savedAchievements.reduce((acc, achievement) => acc + (achievement.improvement || 0), 0);
       setTotalSavings(total);
 
       // Günlük tasarrufları hesapla
-      const dailyData = calculateDailySavings(savedAchievements);
+      const dailyData = calculateDailySavings(progressData.progressHistory || savedAchievements);
       setDailySavings(dailyData);
 
     } catch (error) {
       console.error('Error loading data:', error);
+      setError(error.message || 'Veriler yüklenirken bir hata oluştu');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -140,8 +179,62 @@ export const ProfileScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigation.replace('Login');
+    } catch (error) {
+      Alert.alert('Hata', 'Çıkış yapılırken bir hata oluştu.');
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={styles.loadingText}>Veriler yükleniyor...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#FF5252" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadData}>
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
+      {/* Profil Kartı */}
+      <View style={styles.profileCard}>
+        <View style={styles.profileHeader}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {user.name ? user.name[0].toUpperCase() : '?'}
+            </Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={styles.userName}>{user.name}</Text>
+            <Text style={styles.userEmail}>{user.email}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={handleSignOut}
+        >
+          <MaterialCommunityIcons name="logout" size={24} color="#FF5252" />
+          <Text style={styles.signOutText}>Çıkış Yap</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Su Ayak İzi Kartı */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Su Ayak İzi</Text>
@@ -193,7 +286,7 @@ export const ProfileScreen = ({ route, navigation }) => {
       {/* Yeniden Başlat Butonu */}
       <TouchableOpacity
         style={styles.restartButton}
-        onPress={handleRestart}
+        onPress={() => setShowRestartDialog(true)}
       >
         <MaterialCommunityIcons name="restart" size={24} color="#fff" />
         <Text style={styles.restartButtonText}>{strings.restartChallenge}</Text>
@@ -330,5 +423,99 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     textAlign: 'center',
+  },
+  profileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: '#666',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E3F2FD',
+    marginTop: 16,
+  },
+  signOutText: {
+    color: '#FF5252',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

@@ -9,13 +9,16 @@ import strings from '../localization/strings';
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = ({ route }) => {
-  const { improvementAreas = [], screen } = route.params || {};
+  const params = route?.params || {};
+  const { improvementAreas = [], screen = 'Challenges' } = params;
 
-  console.log('TabNavigator - Improvement Areas:', improvementAreas);
+  console.log('TabNavigator - Route:', route);
+  console.log('TabNavigator - Params:', params);
+  console.log('TabNavigator - Areas:', improvementAreas);
 
   return (
     <Tab.Navigator
-      initialRouteName={screen || 'Challenges'}
+      initialRouteName={screen}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
@@ -54,9 +57,7 @@ export const TabNavigator = ({ route }) => {
         name="Profile" 
         component={ProfileScreen}
         initialParams={{ improvementAreas }}
-        options={{ 
-          title: strings.profile,
-        }}
+        options={{ title: strings.profile }}
       />
     </Tab.Navigator>
   );
