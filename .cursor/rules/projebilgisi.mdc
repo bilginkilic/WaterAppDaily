@@ -31,3 +31,6 @@ valueTotal değerlerini toplayarak o anki su ayak izi hesaplanır. Dolayısı il
 
 -- take challenge sonrası, challenges, achivements ve profile olan bir sayfa acılır. Bu sayfa korunmalıdır.
 -- her zaman hersey acıklayıcı anlasılır olmalıdır.
+
+-eğer survey almıssa, kapat ac yaptıgında kaldıgı yerden acılmalı uygulama.
+challenges kısmındaki taska bastıgında soruyu tekrar sormalı eğer cevap tipi achıvements olursa, cevaplarında güncelleme yapılır ve bu soruya verdıgı cevap ıle degıstırılır. achıvements artar. challenges o madde icin kapanır yanı disabled gorunur. su ayak ızı son cevaplar uzerınden yenıden hesaplanır. veriler buna gore hem local hem de api üzerinden guncellenır

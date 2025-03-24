@@ -23,13 +23,13 @@ export const AchievementsScreen = () => {
     const savedAchievements = await StorageService.getAchievements();
     console.log('Loaded achievements:', savedAchievements);
     if (savedAchievements) {
-      // Tarihe göre sırala - en yeniden en eskiye
+      // Sort by date - newest to oldest
       const sortedAchievements = savedAchievements.sort((a, b) => 
         new Date(b.date || Date.now()) - new Date(a.date || Date.now())
       );
       setAchievements(sortedAchievements);
 
-      // Toplam tasarrufu hesapla
+      // Calculate total savings
       const total = sortedAchievements.reduce((acc, achievement) => 
         acc + (achievement.improvement || 0), 0);
       setTotalSaved(total);
@@ -53,9 +53,43 @@ export const AchievementsScreen = () => {
     return category?.color || '#2196F3';
   };
 
+  const getAchievementTitle = (category) => {
+    switch (category) {
+      case 'dishwashing': return 'Dishwashing Excellence';
+      case 'shower': return 'Shower & Bath Efficiency';
+      case 'laundry': return 'Laundry Optimization';
+      case 'plumbing': return 'Plumbing Maintenance';
+      case 'daily': return 'Daily Water Conservation';
+      case 'car': return 'Car Washing Efficiency';
+      default: return category;
+    }
+  };
+
+  const getAchievementDescription = (achievement) => {
+    if (!achievement.message) {
+      switch (achievement.category) {
+        case 'dishwashing':
+          return 'Great job optimizing your dishwashing routine! You\'re making a significant impact on water conservation.';
+        case 'shower':
+          return 'Excellent progress in reducing shower water usage! Keep up the water-smart habits.';
+        case 'laundry':
+          return 'By optimizing your laundry loads, you\'ve achieved significant water savings!';
+        case 'plumbing':
+          return 'Your attention to plumbing maintenance is helping prevent water waste.';
+        case 'daily':
+          return 'Your daily water-saving habits are making a real difference!';
+        case 'car':
+          return 'Smart choice using professional car washing services to save water!';
+        default:
+          return 'Great achievement in water conservation!';
+      }
+    }
+    return achievement.message;
+  };
+
   return (
     <ScrollView style={styles.container}>
-      {/* Özet Kartı */}
+      {/* Summary Card */}
       <View style={styles.summaryContainer}>
         <Text style={styles.summaryTitle}>{strings.achievements}</Text>
         <View style={styles.badgesContainer}>
@@ -70,7 +104,7 @@ export const AchievementsScreen = () => {
         </View>
       </View>
 
-      {/* Başarılar Listesi */}
+      {/* Achievements List */}
       <View style={styles.achievementsContainer}>
         <Text style={styles.sectionTitle}>{strings.recentAchievements}</Text>
         {achievements.map((achievement, index) => (
@@ -88,19 +122,19 @@ export const AchievementsScreen = () => {
             <View style={styles.achievementContent}>
               <View style={styles.achievementHeader}>
                 <Text style={styles.achievementTitle}>
-                  {categories[achievement.category]?.title || achievement.category}
+                  {getAchievementTitle(achievement.category)}
                 </Text>
                 <Text style={styles.achievementDate}>
                   {new Date(achievement.date || Date.now()).toLocaleDateString()}
                 </Text>
               </View>
               <Text style={styles.achievementMessage}>
-                {achievement.message}
+                {getAchievementDescription(achievement)}
               </Text>
               <View style={styles.savingContainer}>
                 <MaterialCommunityIcons name="water" size={16} color="#2196F3" />
                 <Text style={styles.savingText}>
-                  {strings.formatString(strings.savedWater, achievement.improvement)}
+                  {strings.formatString(strings.savedWater, achievement.improvement || 0)}
                 </Text>
               </View>
             </View>
@@ -120,6 +154,12 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#FFFFFF',
     marginBottom: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   summaryTitle: {
     fontSize: 24,

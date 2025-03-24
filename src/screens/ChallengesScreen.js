@@ -77,19 +77,19 @@ const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
             </View>
             <View style={styles.statsContainer}>
               <Text style={styles.questionCount}>
-                {questionCount} görev
+                {questionCount} Recommended Tasks
               </Text>
               <Text style={styles.potentialSaving}>
-                {maxSavings}L tasarruf potansiyeli
+                Potential Savings: {maxSavings}L
               </Text>
             </View>
           </>
         )}
         {!isActive && (
-          <Text style={styles.inactiveText}>Bu kategori sizin için aktif değil</Text>
+          <Text style={styles.inactiveText}>This category is not active for your profile</Text>
         )}
         {!hasQuestions && isActive && (
-          <Text style={styles.completedText}>Tüm görevler tamamlandı!</Text>
+          <Text style={styles.completedText}>All tasks completed successfully!</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -110,69 +110,153 @@ const ChallengesContent = ({ route, navigation }) => {
         console.log('Improvement Areas:', improvementAreas);
 
         const savedTasks = await StorageService.getTasks();
-        
         console.log('Saved Tasks:', savedTasks);
 
-        // Filter tasks based on improvement areas
+        // Filter tasks based on improvement areas and not completed
         const activeTasks = savedTasks ? savedTasks.filter(task => 
-          improvementAreas.includes(task.category)
+          improvementAreas.includes(task.category) && !task.completed
         ) : [];
         
         console.log('Active Tasks:', activeTasks);
-        
         setTasks(activeTasks);
         setLoading(false);
       } catch (error) {
         console.error('Error loading data:', error);
         setLoading(false);
-        Alert.alert(
-          'Error',
-          'Failed to load tasks. Please try again.'
-        );
+        Alert.alert('Error', 'Failed to load tasks. Please try again.');
       }
     };
 
     loadData();
   }, [improvementAreas]);
 
-  const handleTaskPress = (task) => {
+  const handleTaskPress = async (task) => {
     console.log('Task pressed:', task);
     if (!task) {
       console.warn('No task data provided to handleTaskPress');
       return;
     }
 
-    const defaultOptions = [
-      { text: 'Yes', value: true },
-      { text: 'No', value: false }
-    ];
+    try {
+      // Get the original question from questions array
+      const originalQuestion = questions.find(q => q.id === task.id);
+      if (!originalQuestion) {
+        console.warn('Original question not found');
+        return;
+      }
 
-    setCurrentQuestion({
-      content: task.description || 'Did you complete this task?',
-      options: task.options || defaultOptions,
-      task: task
-    });
-    setShowQuestionModal(true);
+      console.log('Original question:', originalQuestion);
+
+      setCurrentQuestion({
+        id: task.id,
+        content: originalQuestion.text,
+        options: originalQuestion.options,
+        task: task,
+        additionalInfo: originalQuestion.content?.additionalInfo
+      });
+      setShowQuestionModal(true);
+    } catch (error) {
+      console.error('Error in handleTaskPress:', error);
+      Alert.alert('Error', 'Failed to load question details.');
+    }
   };
 
-  const handleModalResponse = async (response) => {
+  const handleModalResponse = async (selectedOption) => {
     if (!currentQuestion?.task) return;
 
     try {
+      console.log('Selected option:', selectedOption);
       const task = currentQuestion.task;
-      const updatedTask = { ...task, completed: response };
-      
-      await StorageService.updateTaskProgress(updatedTask);
-      await loadData(); // Reload tasks after update
-      
-      if (response) {
-        NotificationService.scheduleNotification(
-          'Task Completed!',
-          'Great job on completing your water-saving task!'
+
+      // If the selected option is of type Achievement
+      if (selectedOption.type === 'Achievement') {
+        console.log('Converting task to achievement...');
+
+        // Create new achievement
+        const newAchievement = {
+          id: task.id,
+          category: task.category,
+          type: 'Achievement',
+          date: new Date().toISOString(),
+          improvement: selectedOption.valueSaving,
+          message: selectedOption.task,
+          waterUsage: selectedOption.valueTotal
+        };
+
+        // Add to achievements
+        const currentAchievements = await StorageService.getAchievements();
+        const updatedAchievements = [...(currentAchievements || []), newAchievement];
+        await StorageService.saveAchievements(updatedAchievements);
+
+        // Mark task as completed
+        const updatedTask = { ...task, completed: true };
+        await StorageService.updateTaskProgress(updatedTask);
+
+        // Update water footprint
+        const progress = await StorageService.getProgress();
+        const newWaterprint = progress.currentWaterprint - (task.waterUsage - selectedOption.valueTotal);
+        
+        const updatedProgress = {
+          ...progress,
+          currentWaterprint: newWaterprint,
+          waterprintReduction: progress.waterprintReduction + selectedOption.valueSaving,
+          completedTasks: [...progress.completedTasks, task.id],
+          progressHistory: [
+            ...progress.progressHistory,
+            {
+              date: new Date(),
+              waterprint: newWaterprint
+            }
+          ]
+        };
+
+        await StorageService.saveProgress(updatedProgress);
+
+        // Update API
+        try {
+          const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/update', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${await StorageService.getToken()}`
+            },
+            body: JSON.stringify({
+              currentWaterprint: newWaterprint,
+              taskId: task.id,
+              waterprintReduction: selectedOption.valueSaving
+            })
+          });
+
+          if (!response.ok) {
+            throw new Error('API update failed');
+          }
+
+          console.log('API updated successfully');
+        } catch (error) {
+          console.error('API update error:', error);
+          // Continue with local updates even if API fails
+        }
+
+        // Show success message
+        Alert.alert(
+          'Achievement Unlocked!',
+          'Congratulations! You\'ve earned a new achievement and reduced your water footprint.',
+          [{ text: 'OK' }]
+        );
+
+        // Reload tasks
+        loadData();
+      } else {
+        // If not achievement type, just close the modal
+        Alert.alert(
+          'Keep Working!',
+          'Continue working on this task to earn an achievement.',
+          [{ text: 'OK' }]
         );
       }
     } catch (error) {
-      console.error('Error updating task progress:', error);
+      console.error('Error in handleModalResponse:', error);
+      Alert.alert('Error', 'Failed to update progress. Please try again.');
     }
 
     setShowQuestionModal(false);
@@ -181,12 +265,6 @@ const ChallengesContent = ({ route, navigation }) => {
 
   const renderQuestionModal = () => {
     if (!currentQuestion) return null;
-
-    const message = currentQuestion.content || 'Did you complete this task?';
-    const options = currentQuestion.options || [
-      { text: 'Yes', value: true },
-      { text: 'No', value: false }
-    ];
 
     return (
       <Modal
@@ -197,27 +275,69 @@ const ChallengesContent = ({ route, navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{message}</Text>
-            {currentQuestion.additionalInfo && (
-              <Text style={styles.modalSubtitle}>
-                {currentQuestion.additionalInfo}
-              </Text>
-            )}
-            <View style={styles.modalButtons}>
-              {options.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.modalButton}
-                  onPress={() => handleModalResponse(option.value)}
-                >
-                  <Text style={styles.modalButtonText}>{option.text}</Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{currentQuestion.content}</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setShowQuestionModal(false)}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
             </View>
+            <ScrollView style={styles.modalScroll}>
+              <View style={styles.contentContainer}>
+                {currentQuestion.additionalInfo && (
+                  <Text style={styles.additionalInfo}>
+                    {currentQuestion.additionalInfo}
+                  </Text>
+                )}
+                <View style={styles.optionsContainer}>
+                  {currentQuestion.options.map((option, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.optionButton,
+                        option.type === 'Achievement' && styles.achievementOption
+                      ]}
+                      onPress={() => handleModalResponse(option)}
+                    >
+                      <Text style={[
+                        styles.optionText,
+                        option.type === 'Achievement' && styles.achievementOptionText
+                      ]}>
+                        {option.text}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
     );
+  };
+
+  const getTaskDescription = (task) => {
+    if (!task.text) {
+      switch (task.category) {
+        case 'dishwashing':
+          return 'Optimize your dishwashing routine to save water and energy. Follow recommended practices for maximum efficiency.';
+        case 'shower':
+          return 'Implement water-efficient shower practices to reduce consumption while maintaining comfort.';
+        case 'laundry':
+          return 'Make your laundry routine more water-efficient by following these best practices.';
+        case 'plumbing':
+          return 'Maintain your plumbing system efficiently to prevent water waste and reduce consumption.';
+        case 'daily':
+          return 'Adopt these daily water-saving habits to make a significant impact on your water footprint.';
+        case 'car':
+          return 'Use water-efficient methods for vehicle cleaning to minimize water waste.';
+        default:
+          return 'Complete this task to improve your water efficiency.';
+      }
+    }
+    return task.text;
   };
 
   if (loading) {
@@ -232,8 +352,8 @@ const ChallengesContent = ({ route, navigation }) => {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.title}>Water Saving Challenges</Text>
-          <Text style={styles.subtitle}>Complete these tasks to reduce your water footprint</Text>
+          <Text style={styles.title}>Water Conservation Challenges</Text>
+          <Text style={styles.subtitle}>Complete these tasks to reduce your water footprint and make a positive environmental impact</Text>
         </View>
 
         {/* Show Active Tasks */}
@@ -255,12 +375,14 @@ const ChallengesContent = ({ route, navigation }) => {
                     color={task.completed ? "#4CAF50" : "#2196F3"} 
                   />
                   <View style={styles.taskTextContainer}>
-                    <Text style={styles.taskTitle}>{task.subject || task.category}</Text>
+                    <Text style={styles.taskTitle}>
+                      {categories[task.category]?.title || task.category}
+                    </Text>
                     <Text style={styles.taskDescription}>
-                      {task.text || task.description}
+                      {getTaskDescription(task)}
                     </Text>
                     <Text style={styles.taskSaving}>
-                      Potential saving: {task.waterUsage}L
+                      Potential Water Savings: {task.waterUsage}L
                     </Text>
                   </View>
                 </View>
@@ -270,7 +392,7 @@ const ChallengesContent = ({ route, navigation }) => {
         ) : (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              No active challenges available at the moment.
+              Complete the water usage survey to receive personalized challenges and start your water-saving journey.
             </Text>
           </View>
         )}
@@ -509,12 +631,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#2196F3'
   },
   modalCloseButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFF'
   },
   modalScroll: {
     flex: 1,
