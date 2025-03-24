@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,47 +8,46 @@ import {
   Dimensions,
   TouchableOpacity,
   Image,
-  Modal,
 } from 'react-native';
 import strings from '../localization/strings';
-import { getTutorialVideo, getYoutubeVideoId, getYoutubeEmbedUrl } from '../services/TutorialService';
-import { WebView } from 'react-native-webview';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
 
 const slides = [
   {
     id: '1',
-    title: strings.introTitle1,
-    description: strings.introDesc1,
-    image: require('../assets/intro-1.png'), // Su damlası ve dünya görseli
+    title: 'Su Ayak İzinizi Keşfedin',
+    description: 'Günlük su tüketiminizi analiz ederek çevresel etkinizi öğrenin.',
+    image: require('../assets/intro-1.png'),
+    icon: 'water',
   },
   {
     id: '2',
-    title: strings.introTitle2,
-    description: strings.introDesc2,
-    image: require('../assets/intro-2.png'), // Kişiselleştirilmiş öneri görseli
+    title: 'Kişisel Öneriler Alın',
+    description: 'Size özel tasarruf önerileri ile su tüketiminizi azaltın.',
+    image: require('../assets/intro-2.png'),
+    icon: 'lightbulb-on',
   },
   {
     id: '3',
-    title: strings.introTitle3,
-    description: strings.introDesc3,
-    image: require('../assets/intro-3.png'), // İlerleme ve başarı görseli
+    title: 'İlerlemenizi Takip Edin',
+    description: 'Başarılarınızı görün ve su tasarrufunuzu ölçün.',
+    image: require('../assets/intro-3.png'),
+    icon: 'chart-line-variant',
   },
 ];
 
 export const IntroScreen = ({ navigation }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [showVideo, setShowVideo] = useState(false);
-
-  const introVideo = getTutorialVideo('intro');
-  const videoId = introVideo ? getYoutubeVideoId(introVideo.url) : null;
-  const embedUrl = videoId ? getYoutubeEmbedUrl(videoId) : null;
+  const flatListRef = useRef(null);
 
   const renderSlide = ({ item }) => {
     return (
       <View style={styles.slide}>
-        <Image source={item.image} style={styles.image} />
+        <View style={styles.iconContainer}>
+          <MaterialCommunityIcons name={item.icon} size={60} color="#2196F3" />
+        </View>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.description}>{item.description}</Text>
       </View>
@@ -57,7 +56,11 @@ export const IntroScreen = ({ navigation }) => {
 
   const handleNext = () => {
     if (currentSlideIndex < slides.length - 1) {
-      setCurrentSlideIndex(prev => prev + 1);
+      flatListRef.current?.scrollToIndex({
+        index: currentSlideIndex + 1,
+        animated: true
+      });
+      setCurrentSlideIndex(currentSlideIndex + 1);
     } else {
       navigation.reset({
         index: 0,
@@ -73,13 +76,26 @@ export const IntroScreen = ({ navigation }) => {
     });
   };
 
-  const handleWatchVideo = () => {
-    setShowVideo(true);
+  const renderPaginationDots = () => {
+    return (
+      <View style={styles.paginationContainer}>
+        {slides.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.paginationDot,
+              index === currentSlideIndex && styles.paginationDotActive
+            ]}
+          />
+        ))}
+      </View>
+    );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={slides}
         renderItem={renderSlide}
         horizontal
@@ -89,75 +105,38 @@ export const IntroScreen = ({ navigation }) => {
           const index = Math.round(event.nativeEvent.contentOffset.x / width);
           setCurrentSlideIndex(index);
         }}
+        getItemLayout={(data, index) => ({
+          length: width,
+          offset: width * index,
+          index,
+        })}
       />
 
-      {/* Watch Video Button */}
-      <TouchableOpacity
-        style={styles.watchVideoButton}
-        onPress={handleWatchVideo}
-      >
-        <Text style={styles.watchVideoText}>İzle ve Öğren</Text>
-      </TouchableOpacity>
+      {renderPaginationDots()}
 
-      {/* Pagination Dots */}
-      <View style={styles.pagination}>
-        {slides.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              index === currentSlideIndex && styles.activeDot,
-            ]}
-          />
-        ))}
-      </View>
-
-      {/* Buttons */}
       <View style={styles.buttonsContainer}>
         <TouchableOpacity
           style={styles.skipButton}
           onPress={handleSkip}
         >
-          <Text style={styles.skipText}>{strings.skip}</Text>
+          <Text style={styles.skipButtonText}>Atla</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.nextButton}
           onPress={handleNext}
         >
-          <Text style={styles.nextText}>
-            {currentSlideIndex === slides.length - 1 ? strings.getStarted : strings.next}
+          <Text style={styles.nextButtonText}>
+            {currentSlideIndex === slides.length - 1 ? 'Başla' : 'İleri'}
           </Text>
+          <MaterialCommunityIcons 
+            name={currentSlideIndex === slides.length - 1 ? 'check' : 'arrow-right'} 
+            size={24} 
+            color="#FFF" 
+            style={styles.buttonIcon}
+          />
         </TouchableOpacity>
       </View>
-
-      {/* Video Modal */}
-      <Modal
-        visible={showVideo}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setShowVideo(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{introVideo?.title}</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowVideo(false)}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          {embedUrl && (
-            <WebView
-              source={{ uri: embedUrl }}
-              style={styles.webview}
-              allowsFullscreenVideo
-              javaScriptEnabled
-            />
-          )}
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -169,21 +148,25 @@ const styles = StyleSheet.create({
   },
   slide: {
     width,
-    alignItems: 'center',
     padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  image: {
-    width: width * 0.8,
-    height: width * 0.8,
-    resizeMode: 'contain',
-    marginBottom: 30,
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#E3F2FD',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 40,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: '#333',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   description: {
     fontSize: 16,
@@ -191,85 +174,52 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  pagination: {
+  paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 40,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#BDE3FF',
-    marginHorizontal: 4,
+  paginationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 6,
   },
-  activeDot: {
+  paginationDotActive: {
     backgroundColor: '#2196F3',
     width: 20,
   },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 40,
     paddingBottom: 40,
   },
   skipButton: {
-    padding: 16,
+    padding: 12,
   },
-  skipText: {
-    color: '#666',
+  skipButtonText: {
     fontSize: 16,
+    color: '#666',
   },
   nextButton: {
     backgroundColor: '#2196F3',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  nextText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  watchVideoButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginHorizontal: 40,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  watchVideoText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#1a1a1a',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  nextButtonText: {
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '600',
+    marginRight: 8,
   },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 24,
-  },
-  webview: {
-    flex: 1,
-    backgroundColor: '#000',
+  buttonIcon: {
+    marginLeft: 4,
   },
 }); 

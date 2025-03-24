@@ -2,62 +2,68 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
-import strings from '../localization/strings';
+import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
 export const TabNavigator = ({ route }) => {
-  const params = route?.params || {};
-  const { improvementAreas = [], screen = 'Challenges' } = params;
-
-  console.log('TabNavigator - Route:', route);
-  console.log('TabNavigator - Params:', params);
-  console.log('TabNavigator - Areas:', improvementAreas);
+  const { screen = 'Challenges', improvementAreas = [], waterProfile = null } = route.params || {};
+  
+  console.log('TabNavigator params:', {
+    screen,
+    improvementAreas,
+    waterProfile
+  });
 
   return (
     <Tab.Navigator
       initialRouteName={screen}
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          switch (route.name) {
-            case 'Challenges':
-              iconName = 'water';
-              break;
-            case 'Achievements':
-              iconName = 'trophy';
-              break;
-            case 'Profile':
-              iconName = 'account';
-              break;
-          }
-
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
-        },
+      screenOptions={{
         tabBarActiveTintColor: '#2196F3',
-        tabBarInactiveTintColor: '#666',
+        tabBarInactiveTintColor: 'gray',
         headerShown: false,
-      })}
+      }}
     >
-      <Tab.Screen 
-        name="Challenges" 
+      <Tab.Screen
+        name="Challenges"
         component={ChallengesScreen}
-        initialParams={{ improvementAreas }}
-        options={{ title: strings.challenges }}
+        initialParams={{
+          improvementAreas,
+          waterProfile
+        }}
+        options={{
+          tabBarLabel: 'Görevler',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="flag-checkered" color={color} size={size} />
+          ),
+        }}
       />
-      <Tab.Screen 
-        name="Achievements" 
+      <Tab.Screen
+        name="Achievements"
         component={AchievementsScreen}
-        options={{ title: strings.achievements }}
+        initialParams={{
+          waterProfile
+        }}
+        options={{
+          tabBarLabel: 'Başarılar',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="trophy" color={color} size={size} />
+          ),
+        }}
       />
-      <Tab.Screen 
-        name="Profile" 
+      <Tab.Screen
+        name="Profile"
         component={ProfileScreen}
-        initialParams={{ improvementAreas }}
-        options={{ title: strings.profile }}
+        initialParams={{
+          waterProfile
+        }}
+        options={{
+          tabBarLabel: 'Profil',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account" color={color} size={size} />
+          ),
+        }}
       />
     </Tab.Navigator>
   );

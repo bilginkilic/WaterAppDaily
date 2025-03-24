@@ -1,0 +1,33 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+profil kısmından restart challange kısmını kaldır.
+survey sorularına verılen cevaplara gore alınacak challengler ve achıvementslar belırlenır. ve su ayak ızı hesaplanır. hesaplamalar api aracılıgyla ana sistemi besler. survey tamamlanınca ve yeni bir task achivementa donunce veriler ana sistemi besler
+
+
+--sistemin amacı su ayak ızını hesaplamaktır. intro sonrası 10 soru sorulur. verilen cevaba gore su ayak ızı hesaplanır. örnek do you use a dishwasher to wash your dishes. eğer yes seçerse bu achivementstır. ve achıvements kısmında gozukecektır. eğer no seçerse bu tasktır. task kısmında(meydan okuma) gozukecektır. bu sorunun  ve cevapların valuelarına gore de secilen secenek uzerınden su ayak ızı kumulatıf olarak hesaplanacaktır. sonra butun sorulara verılen cevaplar sonrası meydan okuma baslar ve gorevler kısmındaki işler yapılarak cevabın achivmentsa donusmesı ile su ayak izi gittikçe azalacaktır. ve anket sonrası belirlenen ilk su ayak izi ve sonrasında verilen tasklara verilen cevaplar sonrası eğer seçenek achivements ise su ayak izi azalacaktır.
+
+--bir soruda seçilen cevap type'ına bak eğer type: 'Achievement'  achivements listesine kat, eğer Task ise Task listesine ekle. 
+ve seçilen değerler üzerinden Task da olsa, achivements da olsa valueTotal değerini toplaya toplaya ilerle bu su ayak izi olacaktır. Survey bitince bu değerlerin toplamı başlangıc su ayak izidir.
+
+-- start chalenge kısmındai VErilen cevap listesi, tasklar yeniden cevaplanınca, eğer seçilen seçenek achivement tipinde olursa, bu task tamamlanacak. ve yeni ayak izi hesaplanacak. VErdiği cevap listesi üzerinden
+valueTotal değerlerini toplayarak o anki su ayak izi hesaplanır. Dolayısı ile kullanıcının verdiği cevaplar listesini, task achivementta donustugunde, cevaplar listesini güncelle ve geçerli seçtiği cevaplar üzerinden valueTotal değerlerini toplayarak su ayak izinin son durumunu hesaplamıs olursun.
+
+-Cevap tipine bak. Eğer cevabın tipi Task ise Task'ta gorunur. Eğer cevap Achivement ise acvhivement listesinde gorunecektır.
+
+- uygulama dili ingilizcedir.
+
+-start challenge butonuna basınca, challenges sayfasında, eğer secımler arasındaki tasklar varsa bunları aktif goster . achivements kısmında achviementsları listele. 
+-- hic bir ayak izi hesaplamada çarpma işlemi yapma
+-baslangıcta yani survey yenıden baslıyorsa ya da ılk defa baslıyorsa, previous total additonal usage new total total water footprint 0 olmalıdır.
+
+-  o araç var mı sorusunu sormamızın sebebı eğer aracı yoksa aracını yıkor mu sorusunu sormamak ıcındı. yanı type bossa bunu hesaba katma o soru ne achıvement ne de tasksta yer alamaz. sadece bır sonrakı soruyu gosterıp gostermeme konusunda katkı sağlar yanı eğer evet arac varsa, bir sonraki soru olan aracını nasıl yıkıyorsunu sorusu gosterılır.
+
+
+-- take challenge sonrası, challenges, achivements ve profile olan bir sayfa acılır. Bu sayfa korunmalıdır.
+-- her zaman hersey acıklayıcı anlasılır olmalıdır.

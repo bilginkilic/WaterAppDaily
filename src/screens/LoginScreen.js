@@ -19,8 +19,8 @@ import { useAuth } from '../context/AuthContext';
 const API_URL = 'https://waterappdashboard2.onrender.com/api';
 
 export const LoginScreen = ({ route, navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('blgnklc@gmail.com');
+  const [password, setPassword] = useState('123456');
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
 

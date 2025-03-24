@@ -6,6 +6,7 @@ import {
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import strings from '../localization/strings';
 import questions from '../data/questions';
@@ -15,58 +16,83 @@ export const SurveyScreen = ({ navigation }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [surveyResults, setSurveyResults] = useState({
-    totalSaving: 0,
-    totalUsage: 0,
+    totalWaterFootprint: 0,
     tasks: [],
     achievements: []
   });
 
   const handleAnswer = async (option) => {
-    const newAnswers = [...answers, { questionId: questions[currentQuestion].id, answer: option }];
+    console.log('\n=== PROCESSING NEW ANSWER ===');
+    console.log('Question:', {
+      id: questions[currentQuestion].id,
+      text: questions[currentQuestion].text,
+      category: questions[currentQuestion].category
+    });
+    console.log('Selected Option:', {
+      text: option.text,
+      type: option.type,
+      waterUsage: option.valueTotal,
+      category: option.category
+    });
+
+    const newAnswers = [...answers, { 
+      questionId: questions[currentQuestion].id, 
+      answer: option,
+      type: option.type
+    }];
     setAnswers(newAnswers);
 
-    if (option.valueSaving || option.valueTotal) {
-      const newResults = {
-        totalSaving: surveyResults.totalSaving + (option.valueSaving || 0),
-        totalUsage: surveyResults.totalUsage + (option.valueTotal || 0),
-        tasks: option.type === 'Task' ? [
-          ...surveyResults.tasks, 
-          { 
-            text: option.task, 
-            category: option.category?.toLowerCase(),
-            date: new Date().toISOString()
-          }
-        ] : surveyResults.tasks,
-        achievements: option.type === 'Achievement' ? [
-          ...surveyResults.achievements, 
-          { 
-            text: option.task, 
-            category: option.category,
-            improvement: option.valueSaving || 0,
-            date: new Date().toISOString(),
-            type: 'Achievement'
-          }
-        ] : surveyResults.achievements
-      };
-      
-      setSurveyResults(newResults);
-      await StorageService.saveSurveyResults(newResults);
+    // Calculate new water footprint - only if type exists
+    const previousWaterFootprint = surveyResults.totalWaterFootprint;
+    const additionalWaterUsage = option.type ? (option.valueTotal || 0) : 0;
+    const waterFootprint = previousWaterFootprint + additionalWaterUsage;
 
-      if (option.type === 'Achievement') {
-        const savedAchievements = await StorageService.getAchievements() || [];
-        const newAchievement = {
-          category: option.category,
-          improvement: option.valueSaving || 0,
-          message: option.task,
-          date: new Date().toISOString(),
-          type: 'Achievement'
-        };
-        await StorageService.saveAchievements([...savedAchievements, newAchievement]);
-      }
+    console.log('\nWater Footprint Calculation:');
+    console.log('Previous Total:', previousWaterFootprint, 'L');
+    console.log('Additional Usage:', additionalWaterUsage, 'L');
+    console.log('New Total:', waterFootprint, 'L');
+
+    // Create new task or achievement only if type exists
+    let newItem = null;
+    if (option.type && option.type !== 'null') {
+      newItem = {
+        id: questions[currentQuestion].id,
+        category: option.category || questions[currentQuestion].category,
+        description: option.text,
+        waterUsage: option.valueTotal || 0,
+        type: option.type,
+        date: new Date().toISOString()
+      };
+      console.log(`\nCreating new ${option.type}:`, newItem);
     }
 
+    const newResults = {
+      totalWaterFootprint: waterFootprint,
+      tasks: newItem && newItem.type === 'Task' ? 
+        [...surveyResults.tasks, newItem] : 
+        surveyResults.tasks,
+      achievements: newItem && newItem.type === 'Achievement' ? 
+        [...surveyResults.achievements, newItem] : 
+        surveyResults.achievements
+    };
+
+    console.log('\nCurrent Survey Status:');
+    console.log('Total Water Footprint:', waterFootprint, 'L');
+    console.log('Total Tasks:', newResults.tasks.length);
+    console.log('Total Achievements:', newResults.achievements.length);
+    console.log('Question Progress:', `${currentQuestion + 1}/${questions.length}`);
+    console.log('===============================\n');
+
+    setSurveyResults(newResults);
+    await StorageService.saveSurveyResults(newResults);
+
     if (currentQuestion + 1 < questions.length) {
-      setCurrentQuestion(prev => prev + 1);
+      // Skip car washing question if user doesn't have a car
+      if (questions[currentQuestion].id === 9 && option.text === 'No') {
+        setCurrentQuestion(prev => prev + 2); // Skip next question
+      } else {
+        setCurrentQuestion(prev => prev + 1);
+      }
     } else {
       handleSurveyComplete();
     }
@@ -74,28 +100,39 @@ export const SurveyScreen = ({ navigation }) => {
 
   const handleSurveyComplete = async () => {
     try {
-      await StorageService.saveInitialSurvey(answers);
-      
-      const totals = answers.reduce((acc, answer) => {
-        const option = answer.answer;
-        return {
-          totalUsage: acc.totalUsage + (option.valueTotal || 0),
-          totalSaving: acc.totalSaving + (option.valueSaving || 0),
-          tasks: option.type === 'Task' ? [...acc.tasks, {
-            text: option.task,
-            category: option.category?.toLowerCase(),
-            date: new Date().toISOString()
-          }] : acc.tasks
-        };
-      }, { totalUsage: 0, totalSaving: 0, tasks: [] });
+      // Calculate correct answers count (same as achievements count)
+      const correctAnswersCount = surveyResults.achievements.length;
 
-      const improvementAreas = totals.tasks.reduce((acc, task) => {
-        if (task?.category && !acc.includes(task.category)) {
+      // Format answers for API
+      const formattedAnswers = answers.map(answer => ({
+        questionId: answer.questionId,
+        answer: answer.answer.text,
+        isCorrect: answer.answer.type === 'Achievement'
+      }));
+
+      console.log('\n=== SURVEY COMPLETED ===');
+      console.log('Final Water Footprint:', surveyResults.totalWaterFootprint, 'L');
+      console.log('Total Tasks Created:', surveyResults.tasks.length);
+      console.log('Total Achievements:', surveyResults.achievements.length);
+      console.log('Correct Answers Count:', correctAnswersCount);
+      console.log('Formatted Answers:', formattedAnswers);
+      console.log('=======================\n');
+
+      // Get improvement areas from tasks
+      const improvementAreas = surveyResults.tasks.reduce((acc, task) => {
+        if (task.category && !acc.includes(task.category)) {
           acc.push(task.category);
         }
         return acc;
       }, []);
 
+      // Save initial survey data
+      await StorageService.saveInitialSurvey({
+        answers: formattedAnswers,
+        correctAnswersCount
+      });
+
+      // Navigate to results screen with all required data
       navigation.reset({
         index: 0,
         routes: [
@@ -103,10 +140,12 @@ export const SurveyScreen = ({ navigation }) => {
             name: 'SurveyResults',
             params: {
               results: {
-                tasks: totals.tasks,
-                totalUsage: totals.totalUsage,
-                totalSaving: totals.totalSaving,
-                improvementAreas
+                tasks: surveyResults.tasks,
+                achievements: surveyResults.achievements,
+                totalWaterFootprint: surveyResults.totalWaterFootprint,
+                improvementAreas,
+                answers: formattedAnswers,
+                correctAnswersCount: correctAnswersCount // Achievements sayısı
               }
             }
           }
@@ -114,18 +153,36 @@ export const SurveyScreen = ({ navigation }) => {
       });
     } catch (error) {
       console.error('Error saving survey:', error);
+      Alert.alert(
+        'Error',
+        'Failed to complete survey. Please try again.'
+      );
     }
   };
 
   useEffect(() => {
-    const loadPreviousResults = async () => {
-      const previousResults = await StorageService.getSurveyResults();
-      if (previousResults) {
-        setSurveyResults(previousResults);
-      }
+    const initializeSurvey = async () => {
+      // Clear all previous results
+      await StorageService.clearStorage();
+      
+      // Reset all state
+      setCurrentQuestion(0);
+      setAnswers([]);
+      setSurveyResults({
+        totalWaterFootprint: 0,
+        tasks: [],
+        achievements: []
+      });
+
+      console.log('\n=== STARTING NEW SURVEY ===');
+      console.log('Initial Water Footprint:', 0, 'L');
+      console.log('Initial Tasks:', 0);
+      console.log('Initial Achievements:', 0);
+      console.log('===========================\n');
     };
-    loadPreviousResults();
-  }, []);
+
+    initializeSurvey();
+  }, []); // Run only once when component mounts
 
   const currentQ = questions[currentQuestion];
 
@@ -134,7 +191,7 @@ export const SurveyScreen = ({ navigation }) => {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>
-            {strings.formatString(strings.questionProgress, currentQuestion + 1, questions.length)}
+            Question {currentQuestion + 1} of {questions.length}
           </Text>
           <View style={styles.progressBar}>
             <View 

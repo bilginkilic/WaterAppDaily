@@ -13,6 +13,7 @@ import strings from '../localization/strings';
 import { categories } from '../data/categories';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import StorageService from '../services/StorageService';
 
 const { width } = Dimensions.get('window');
 
@@ -25,99 +26,134 @@ const formatWaterVolume = (liters) => {
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
   const { results } = route.params;
+  const waterFootprint = results?.totalWaterFootprint || 0;
+  const tasks = results?.tasks || [];
+  const achievements = results?.achievements || [];
   
-  // Improvement gereken kategorileri belirle
-  const improvementAreas = results.tasks.reduce((acc, task) => {
-    if (task?.category && !acc.includes(task.category)) {
-      acc.push(task.category);
-    }
-    return acc;
-  }, []);
-
-  // Debug için log ekleyelim
-  console.log('Categories:', categories);
-  console.log('Improvement Areas:', improvementAreas);
-
-  // Sadece geçerli kategorileri gösterelim
-  const validImprovementAreas = improvementAreas.filter(categoryId => 
-    categories[categoryId] && categories[categoryId].title
-  );
-
+  // Calculate potential savings from tasks with validation
+  const potentialSaving = tasks.reduce((total, task) => {
+    const waterUsage = task.waterUsage || 0;
+    console.log(`Task ${task.id}: waterUsage = ${waterUsage}`);
+    return total + waterUsage;
+  }, 0);
+  
+  // Debug logs
+  console.log('Survey Results:', JSON.stringify(results, null, 2));
+  console.log('Tasks:', tasks);
+  console.log('Achievements:', achievements);
+  console.log('Water Footprint:', waterFootprint);
+  console.log('Potential Saving:', potentialSaving);
+  console.log('Improvement Areas:', results.improvementAreas);
+  console.log('Available Categories:', Object.keys(categories));
+  
+  // Validate improvement areas
+  const validImprovementAreas = results.improvementAreas.filter(id => categories[id]);
+  if (validImprovementAreas.length !== results.improvementAreas.length) {
+    console.warn('Some improvement areas are invalid:', 
+      results.improvementAreas.filter(id => !categories[id]));
+  }
+  
   const handleStartChallenge = async () => {
-    console.log('Starting challenge with areas:', improvementAreas);
-    console.log('Valid improvement areas:', validImprovementAreas);
-    
     try {
-      // API isteği için veriyi hazırla
-      const answers = results.tasks.map(task => ({
-        questionId: task.id || task.questionId,
-        answer: task.answer,
-        isCorrect: task.isCorrect || false
-      }));
+      // Clear all local storage first
+      await StorageService.clearStorage();
 
-      console.log('Sending initial profile data:', {
-        answers,
-        correctAnswersCount: answers.filter(a => a.isCorrect).length,
-        initialWaterprint: results.totalUsage
+      // Calculate total water usage and potential savings
+      const totalWaterUsage = results.tasks.reduce((sum, task) => sum + task.waterUsage, 0);
+
+      // Get improvement areas from both tasks and achievements
+      const allItems = [...results.tasks, ...results.achievements];
+      const improvementAreas = allItems.reduce((areas, item) => {
+        if (item.category && !areas.includes(item.category)) {
+          areas.push(item.category);
+        }
+        return areas;
+      }, []);
+
+      console.log('\n=== CREATING INITIAL PROFILE ===');
+      console.log('Initial water footprint:', waterFootprint);
+      console.log('Tasks:', results.tasks);
+      console.log('Achievements:', results.achievements);
+      console.log('Monthly potential saving:', totalWaterUsage);
+      console.log('Improvement Areas:', improvementAreas);
+
+      // Save initial data to local storage
+      await StorageService.saveTasks(results.tasks);
+      await StorageService.saveAchievements(results.achievements);
+      await StorageService.saveWaterProfile({
+        initialWaterprint: waterFootprint,
+        dailyUsage: waterFootprint,
+        lastUpdated: new Date().toISOString()
       });
 
-      // İlerleme verilerini oluştur
+      // Create initial profile data
+      const profileData = {
+        answers: results.answers,
+        correctAnswersCount: results.correctAnswersCount,
+        initialWaterprint: waterFootprint,
+        dailyUsage: waterFootprint,
+        tasks: results.tasks,
+        achievements: results.achievements,
+        categories: improvementAreas,
+        potentialSaving: totalWaterUsage,
+        challengeStartDate: new Date().toISOString()
+      };
+
+      // Get user token
+      const userToken = await AsyncStorage.getItem('userToken');
+      if (!userToken) {
+        throw new Error('User token not found');
+      }
+
+      // Send to API with proper error handling
       const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/initial-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await AsyncStorage.getItem('userToken')}`,
+          'Authorization': `Bearer ${userToken}`,
         },
-        body: JSON.stringify({
-          answers,
-          correctAnswersCount: answers.filter(a => a.isCorrect).length,
-          initialWaterprint: results.totalUsage
-        }),
+        body: JSON.stringify(profileData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Server error:', errorData);
-        throw new Error(errorData.error || 'İlerleme verileri oluşturulamadı');
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to create water footprint');
       }
 
-      const data = await response.json();
-      console.log('Initial profile created:', data);
+      const responseData = await response.json();
+      console.log('API Response:', responseData);
 
-      // Main ekranına git
+      // Navigate to challenges screen
       navigation.reset({
         index: 0,
         routes: [
-          {
-            name: 'Main',
+          { 
+            name: 'Challenges',
             params: {
-              improvementAreas: validImprovementAreas,
-              screen: 'Challenges'
+              improvementAreas: improvementAreas,
+              waterProfile: {
+                initialWaterprint: waterFootprint,
+                dailyUsage: waterFootprint,
+                potentialSaving: totalWaterUsage
+              }
             }
           }
-        ]
+        ],
       });
+
     } catch (error) {
-      console.error('Error creating progress:', error);
+      console.error('Error creating water footprint:', error);
       Alert.alert(
-        'Hata',
-        'İlerleme verileri oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.'
+        'Error',
+        'Failed to start the challenge. Please try again. ' + error.message
       );
     }
   };
 
-  // Su tüketim ve tasarruf değerlerini hesapla
-  const dailyUsage = results.totalUsage;
-  const potentialSaving = results.totalSaving;
-  const savingPercentage = Math.min(Math.round((potentialSaving / dailyUsage) * 100), 100);
-  
-  // Yıllık tasarruf potansiyelini hesapla
-  const yearlyPotentialSaving = potentialSaving * 365;
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Başlık ve Özet */}
         <View style={styles.header}>
           <View style={styles.confettiContainer}>
             <MaterialCommunityIcons name="party-popper" size={32} color="#2196F3" />
@@ -125,63 +161,70 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           <Text style={styles.title}>{strings.surveyComplete}</Text>
         </View>
 
-        {/* Su Tüketim Özeti */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Günlük Su Tüketiminiz</Text>
-          <Text style={styles.usageAmount}>{formatWaterVolume(dailyUsage)}</Text>
-          <View style={styles.divider} />
-          <Text style={styles.savingTitle}>Tasarruf Potansiyeli</Text>
-          <Text style={styles.savingAmount}>{formatWaterVolume(potentialSaving)}</Text>
-          <Text style={styles.savingPerDay}>günlük</Text>
-          <View style={styles.yearlyContainer}>
-            <Text style={styles.yearlyLabel}>Yıllık potansiyel tasarruf:</Text>
-            <Text style={styles.yearlyAmount}>{formatWaterVolume(yearlyPotentialSaving)}</Text>
+          <Text style={styles.summaryTitle}>Your Monthly Water Usage Water Footprint</Text>
+          <Text style={styles.amount}>{waterFootprint.toFixed(1)}L</Text>
+          
+          <View style={styles.savingContainer}>
+            <Text style={styles.savingTitle}>Potential Monthly Saving</Text>
+            <Text style={styles.savingAmount}>
+              {potentialSaving.toFixed(1)}L
+            </Text>
+            <Text style={styles.savingNote}>Based on your tasks and improvements</Text>
           </View>
         </View>
 
-        {/* Geliştirilmesi Gereken Alanlar */}
         <View style={styles.areasContainer}>
-          <Text style={styles.sectionTitle}>İyileştirme Alanları</Text>
+          <Text style={styles.sectionTitle}>{strings.improvementAreasTitle}</Text>
           <Text style={styles.explanationText}>
-            Aşağıdaki alanlarda yapacağınız değişikliklerle su tüketiminizi azaltabilirsiniz:
+            {strings.improvementAreasDesc}
           </Text>
-          {validImprovementAreas.map((categoryId) => (
-            <View key={categoryId} style={styles.categoryCard}>
-              <View style={[styles.categoryIcon, { backgroundColor: categories[categoryId].color }]}>
-                <MaterialCommunityIcons 
-                  name={categories[categoryId].icon || 'water'} 
-                  size={24} 
-                  color="#FFF" 
-                />
+          {results.improvementAreas.map((categoryId) => {
+            const category = categories[categoryId];
+            if (!category) return null;
+
+            const categoryColor = category.color || '#2196F3';
+            const categoryIcon = category.icon || 'water';
+
+            return (
+              <View key={categoryId} style={styles.categoryCard}>
+                <View style={[styles.categoryIcon, { backgroundColor: categoryColor }]}>
+                  {typeof categoryIcon === 'function' ? (
+                    <categoryIcon width={24} height={24} color="#FFF" />
+                  ) : (
+                    <MaterialCommunityIcons 
+                      name={categoryIcon} 
+                      size={24} 
+                      color="#FFF" 
+                    />
+                  )}
+                </View>
+                <View style={styles.categoryContent}>
+                  <Text style={styles.categoryTitle}>
+                    {category.title || 'Category'}
+                  </Text>
+                  <Text style={styles.categoryDescription}>
+                    {category.description || ''}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.categoryContent}>
-                <Text style={styles.categoryTitle}>
-                  {categories[categoryId].title}
-                </Text>
-                <Text style={styles.categoryDescription}>
-                  {categories[categoryId].description}
-                </Text>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
-        {/* Challenge Açıklaması */}
         <View style={styles.challengeInfoContainer}>
           <MaterialCommunityIcons name="lightbulb-on" size={24} color="#1976D2" />
           <Text style={styles.challengeInfoText}>
-            30 günlük su tasarrufu meydan okumasına katılarak, alışkanlıklarınızı değiştirin
-            ve gerçek tasarruf potansiyelinizi keşfedin.
+            {strings.challengeInfo}
           </Text>
         </View>
 
-        {/* Challenge Başlatma */}
         <TouchableOpacity 
           style={styles.startButton}
           onPress={handleStartChallenge}
         >
           <MaterialCommunityIcons name="flag-checkered" size={24} color="#FFF" style={styles.buttonIcon} />
-          <Text style={styles.startButtonText}>Meydan Okumayı Başlat</Text>
+          <Text style={styles.startButtonText}>{strings.startChallengeButton}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -228,17 +271,15 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
-  usageAmount: {
+  amount: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
   },
-  divider: {
-    height: 1,
-    width: '80%',
-    backgroundColor: '#E0E0E0',
-    marginVertical: 16,
+  savingContainer: {
+    marginTop: 16,
+    alignItems: 'center',
   },
   savingTitle: {
     fontSize: 18,
@@ -251,27 +292,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#4CAF50',
   },
-  savingPerDay: {
+  savingNote: {
     fontSize: 16,
     color: '#4CAF50',
     marginBottom: 16,
-  },
-  yearlyContainer: {
-    backgroundColor: '#E8F5E9',
-    padding: 12,
-    borderRadius: 8,
-    width: '100%',
-    alignItems: 'center',
-  },
-  yearlyLabel: {
-    fontSize: 14,
-    color: '#2E7D32',
-    marginBottom: 4,
-  },
-  yearlyAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2E7D32',
   },
   areasContainer: {
     marginBottom: 32,

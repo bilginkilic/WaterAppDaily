@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2048" height="2048" viewBox="0 0 2048 2048" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E3F2FD;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#BBDEFB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="drop-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2196F3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1976D2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="2048" height="2048" fill="url(#bg-gradient)"/>
+  
+  <!-- Water Drop -->
+  <g transform="translate(512, 412) scale(1.5)">
+    <path d="M512 150
+             C 512 150, 100 600, 100 750
+             C 100 900, 300 1000, 512 1000
+             C 724 1000, 924 900, 924 750
+             C 924 600, 512 150, 512 150 Z"
+          fill="url(#drop-gradient)"
+          stroke="#1565C0"
+          stroke-width="8"/>
+    <circle cx="700" cy="400" r="40" fill="#FFFFFF" opacity="0.3"/>
+  </g>
+  
+  <!-- App Name -->
+  <text x="1024" y="1600" 
+        font-family="Arial, sans-serif" 
+        font-size="120" 
+        font-weight="bold"
+        text-anchor="middle"
+        fill="#1565C0">
+    WaterAppDaily
+  </text>
+</svg> 
