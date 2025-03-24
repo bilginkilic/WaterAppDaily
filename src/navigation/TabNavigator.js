@@ -4,6 +4,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { ChallengesScreen } from '../screens/ChallengesScreen';
 import { AchievementsScreen } from '../screens/AchievementsScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import strings from '../localization/strings';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,7 +34,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Görevler',
+          tabBarLabel: 'Challenges',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="flag-checkered" color={color} size={size} />
           ),
@@ -46,7 +47,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Başarılar',
+          tabBarLabel: 'Achievements',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="trophy" color={color} size={size} />
           ),
@@ -59,7 +60,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Profil',
+          tabBarLabel: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" color={color} size={size} />
           ),

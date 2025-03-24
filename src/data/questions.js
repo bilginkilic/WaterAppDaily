@@ -13,7 +13,7 @@ const questions = [
     content: {
       message: 'Switch to a dishwasher and save both water and time!',
       image: 'dishwasher.jpg',
-      video: 'https://thepublicsradio.org/episode/whats-the-most-efficient-way-to-wash-your-dishes',
+      video: 'https://www.youtube.com/watch?v=PUCk6mMAZNA',
       additionalInfo: 'Studies suggest that using a dishwasher uses 73% less water than washing dishes by hand'
     }
   },
@@ -29,7 +29,7 @@ const questions = [
     content: {
       message: 'Modern dishwashers are designed to handle tough food residues',
       image: 'pre-rinse.jpg',
-      video: 'https://www.theguardian.com/lifeandstyle/2020/dec/25/how-to-properly-load-a-dishwasher',
+      video: 'https://www.youtube.com/watch?v=5si55pHkDIk',
       additionalInfo: 'Modern dishwashers do not need plates and dishes to be rinsed'
     }
   },
@@ -45,7 +45,7 @@ const questions = [
     content: {
       message: 'Make every drop count! Wait for a full load',
       image: 'full-load.jpg',
-      video: 'https://www.which.co.uk/reviews/dishwashers/article/how-to-load-your-dishwasher',
+      video: 'https://www.youtube.com/watch?v=DX8jpet6Q_k',
       additionalInfo: 'A half-loaded dishwasher uses nearly the same amount of water as a full load'
     }
   },
@@ -61,7 +61,7 @@ const questions = [
     content: {
       message: 'Every drop counts! Switch to low-flow taps',
       image: 'aerator.jpg',
-      video: 'https://www.youtube.com/watch?v=B2cQe9pTwVo',
+      video: 'https://www.youtube.com/watch?v=fFQiIU_zJ5U',
       additionalInfo: 'Upgrading to low-flow taps is a cost-effective way to conserve water'
     }
   },
@@ -80,7 +80,7 @@ const questions = [
     content: {
       message: 'Time to reflect! Can you cut down a few minutes?',
       image: 'shower-timer.jpg',
-      video: 'https://showergem.com/blogs/news/how-to-take-a-quick-shower',
+      video: 'https://www.youtube.com/watch?v=v-TwsMtvw7w',
       additionalInfo: 'By reducing your shower time, you save water and energy'
     }
   },
@@ -96,7 +96,7 @@ const questions = [
     content: {
       message: 'Plan ahead! Combine your laundry to make full loads',
       image: 'laundry.jpg',
-      video: 'https://www.leadhousehold.co.za/latest-news/ten-tips-save-water-domestic-laundry',
+      video: 'https://www.youtube.com/watch?v=An-TW6tZd0o',
       additionalInfo: 'Running your machine with full loads extends its life'
     }
   },
@@ -112,7 +112,7 @@ const questions = [
     content: {
       message: 'Save 12 litres by turning off the tap while brushing',
       image: 'brushing.jpg',
-      video: 'https://www.savewatersavemoney.co.uk/water-efficiency-tips',
+      video: 'https://www.youtube.com/watch?v=gtcZbN0Z08c',
       additionalInfo: 'Small changes in daily habits can lead to big savings'
     }
   },
@@ -128,7 +128,7 @@ const questions = [
     content: {
       message: 'Regular checks keep your plumbing in top shape',
       image: 'leaking-pipe.jpg',
-      video: 'https://pureplumbingpros.com.au/how-to-fix-a-leaking-tap',
+      video: 'https://www.youtube.com/watch?v=Rl6YOGCoZvU',
       additionalInfo: 'Leaks can waste a lot of water and increase bills'
     }
   },
@@ -143,7 +143,7 @@ const questions = [
     content: {
       message: 'Consider eco-friendly car washing methods',
       image: 'car-wash.jpg',
-      video: 'https://www.example.com/eco-car-wash',
+      video: 'https://www.youtube.com/watch?v=RoQRdHF2qgI',
       additionalInfo: 'Vehicle maintenance can impact water consumption'
     }
   },
@@ -159,7 +159,7 @@ const questions = [
     content: {
       message: 'Save water while keeping your car clean',
       image: 'pressure-wash.jpg',
-      video: 'https://mde.maryland.gov/programs/water/waterconservation/pages/carwashing.aspx',
+      video: 'https://www.youtube.com/watch?v=RoQRdHF2qgI',
       additionalInfo: 'Use water-efficient methods for vehicle cleaning'
     }
   }

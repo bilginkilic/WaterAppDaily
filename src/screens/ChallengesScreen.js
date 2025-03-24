@@ -14,9 +14,10 @@ import {
   Linking,
   AsyncStorage,
   ActivityIndicator,
+  Clipboard,
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { categories } from '../data/categories';
+import { categories, categoryIds } from '../data/categories';
 import questions from '../data/questions';
 import strings from '../localization/strings';
 import { questionsByCategory, getCategoryQuestionCount, getCategoryMaxSavings } from '../data/questionsByCategory';
@@ -102,31 +103,55 @@ const ChallengesContent = ({ route, navigation }) => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [achievements, setAchievements] = useState([]);
+
+  const loadData = async () => {
+    try {
+      console.log('Loading tasks...');
+      console.log('Improvement Areas:', improvementAreas);
+
+      // Ensure water profile exists
+      await StorageService.ensureWaterProfile();
+
+      // First, validate and update all tasks
+      await StorageService.validateAndUpdateTasks();
+      
+      // Then get the validated tasks
+      const savedTasks = await StorageService.getTasks();
+      console.log('Saved Tasks:', savedTasks);
+
+      if (!savedTasks || !Array.isArray(savedTasks)) {
+        console.warn('No saved tasks found or invalid format');
+        setTasks([]);
+        setLoading(false);
+        return;
+      }
+
+      // Filter tasks based on improvement areas and completion status
+      let activeTasks;
+      if (improvementAreas && improvementAreas.length > 0) {
+        console.log('Filtering tasks by improvement areas:', improvementAreas);
+        activeTasks = savedTasks.filter(task => 
+          improvementAreas.includes(task.category) && !task.completed
+        );
+        console.log('Filtered tasks:', activeTasks);
+      } else {
+        console.log('No improvement areas specified, showing all uncompleted tasks');
+        activeTasks = savedTasks.filter(task => !task.completed);
+      }
+
+      setTasks(activeTasks);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setLoading(false);
+      Alert.alert('Error', 'Failed to load tasks. Please try again.');
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        console.log('Loading tasks...');
-        console.log('Improvement Areas:', improvementAreas);
-
-        const savedTasks = await StorageService.getTasks();
-        console.log('Saved Tasks:', savedTasks);
-
-        // Filter tasks based on improvement areas and not completed
-        const activeTasks = savedTasks ? savedTasks.filter(task => 
-          improvementAreas.includes(task.category) && !task.completed
-        ) : [];
-        
-        console.log('Active Tasks:', activeTasks);
-        setTasks(activeTasks);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading data:', error);
-        setLoading(false);
-        Alert.alert('Error', 'Failed to load tasks. Please try again.');
-      }
-    };
-
     loadData();
   }, [improvementAreas]);
 
@@ -152,12 +177,93 @@ const ChallengesContent = ({ route, navigation }) => {
         content: originalQuestion.text,
         options: originalQuestion.options,
         task: task,
-        additionalInfo: originalQuestion.content?.additionalInfo
+        additionalInfo: originalQuestion.additionalInfo || originalQuestion.content?.additionalInfo
       });
       setShowQuestionModal(true);
     } catch (error) {
       console.error('Error in handleTaskPress:', error);
       Alert.alert('Error', 'Failed to load question details.');
+    }
+  };
+
+  const handleWatchVideo = (categoryId) => {
+    try {
+      const videoData = getTutorialVideo(categoryId);
+      console.log('Video data:', videoData);
+      
+      // Önce TutorialService'ten videoyu al
+      if (videoData && videoData.url) {
+        console.log('Video URL:', videoData.url);
+        
+        // Doğrudan YouTube'u açmak için Linking kullan
+        Linking.canOpenURL(videoData.url).then(supported => {
+          if (supported) {
+            Linking.openURL(videoData.url);
+          } else {
+            console.log('Cannot open URL: ' + videoData.url);
+            Alert.alert(
+              'Video Player',
+              'Cannot open the video URL. Would you like to copy it to clipboard?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                },
+                {
+                  text: 'Copy URL',
+                  onPress: () => {
+                    Clipboard.setString(videoData.url);
+                    Alert.alert('URL Copied', 'Video URL has been copied to clipboard');
+                  }
+                }
+              ]
+            );
+          }
+        }).catch(err => {
+          console.error('Error opening URL:', err);
+          Alert.alert(strings.error, strings.videoLoadError);
+        });
+      } else {
+        // TutorialService'te video yoksa, doğrudan questions.js'ten al
+        const question = questions.find(q => q.category === categoryId);
+        if (question && question.content && question.content.video) {
+          console.log('Fallback question video URL:', question.content.video);
+          
+          // Doğrudan YouTube'u açmak için Linking kullan
+          Linking.canOpenURL(question.content.video).then(supported => {
+            if (supported) {
+              Linking.openURL(question.content.video);
+            } else {
+              console.log('Cannot open URL: ' + question.content.video);
+              Alert.alert(
+                'Video Player',
+                'Cannot open the video URL. Would you like to copy it to clipboard?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel'
+                  },
+                  {
+                    text: 'Copy URL',
+                    onPress: () => {
+                      Clipboard.setString(question.content.video);
+                      Alert.alert('URL Copied', 'Video URL has been copied to clipboard');
+                    }
+                  }
+                ]
+              );
+            }
+          }).catch(err => {
+            console.error('Error opening URL:', err);
+            Alert.alert(strings.error, strings.videoLoadError);
+          });
+        } else {
+          Alert.alert(strings.error, strings.videoLoadError);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading video:', error);
+      Alert.alert(strings.error, strings.videoLoadError);
     }
   };
 
@@ -188,21 +294,43 @@ const ChallengesContent = ({ route, navigation }) => {
         const updatedAchievements = [...(currentAchievements || []), newAchievement];
         await StorageService.saveAchievements(updatedAchievements);
 
+        // Update local state for achievements
+        setAchievements(updatedAchievements);
+
         // Mark task as completed
         const updatedTask = { ...task, completed: true };
         await StorageService.updateTaskProgress(updatedTask);
 
+        // Update tasks state to reflect completion
+        setTasks(prevTasks => prevTasks.map(t => 
+          t.id === task.id ? { ...t, completed: true } : t
+        ));
+
         // Update water footprint
-        const progress = await StorageService.getProgress();
-        const newWaterprint = progress.currentWaterprint - (task.waterUsage - selectedOption.valueTotal);
+        const progress = await StorageService.ensureWaterProfile();
         
+        // Get updated total water footprint by summing valueTotal from all current answers
+        const answers = await StorageService.getAnswers();
+        // Find the answer that corresponds to this task and replace it
+        const updatedAnswers = answers.map(answer => 
+          answer.questionId === task.id ? 
+          {...answer, answer: selectedOption.text, waterprintValue: selectedOption.valueTotal} : 
+          answer
+        );
+        await StorageService.saveAnswers(updatedAnswers);
+        
+        // Calculate new water footprint based on all current answers
+        const newWaterprint = updatedAnswers.reduce((total, answer) => 
+          total + (answer.waterprintValue || 0), 0);
+        
+        // Ensure all required fields exist in progress object
         const updatedProgress = {
-          ...progress,
+          initialWaterprint: progress?.initialWaterprint || newWaterprint,
           currentWaterprint: newWaterprint,
-          waterprintReduction: progress.waterprintReduction + selectedOption.valueSaving,
-          completedTasks: [...progress.completedTasks, task.id],
+          waterprintReduction: (progress?.initialWaterprint || newWaterprint) - newWaterprint,
+          completedTasks: [...(progress?.completedTasks || []), task.id],
           progressHistory: [
-            ...progress.progressHistory,
+            ...(progress?.progressHistory || []),
             {
               date: new Date(),
               waterprint: newWaterprint
@@ -214,11 +342,12 @@ const ChallengesContent = ({ route, navigation }) => {
 
         // Update API
         try {
+          const token = await StorageService.getToken();
           const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/update', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${await StorageService.getToken()}`
+              'Authorization': `Bearer ${token || ''}`
             },
             body: JSON.stringify({
               currentWaterprint: newWaterprint,
@@ -248,19 +377,14 @@ const ChallengesContent = ({ route, navigation }) => {
         loadData();
       } else {
         // If not achievement type, just close the modal
-        Alert.alert(
-          'Keep Working!',
-          'Continue working on this task to earn an achievement.',
-          [{ text: 'OK' }]
-        );
+        setShowQuestionModal(false);
       }
     } catch (error) {
       console.error('Error in handleModalResponse:', error);
-      Alert.alert('Error', 'Failed to update progress. Please try again.');
+      Alert.alert('Error', 'Failed to update your progress.');
+    } finally {
+      setShowQuestionModal(false);
     }
-
-    setShowQuestionModal(false);
-    setCurrentQuestion(null);
   };
 
   const renderQuestionModal = () => {
@@ -268,48 +392,59 @@ const ChallengesContent = ({ route, navigation }) => {
 
     return (
       <Modal
-        animationType="slide"
-        transparent={true}
         visible={showQuestionModal}
+        transparent={true}
+        animationType="slide"
         onRequestClose={() => setShowQuestionModal(false)}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{currentQuestion.content}</Text>
-              <TouchableOpacity 
-                style={styles.modalCloseButton}
+              <Text style={styles.modalTitle}>{strings.challengeTitle}</Text>
+              <TouchableOpacity
+                style={styles.closeModalButton}
                 onPress={() => setShowQuestionModal(false)}
               >
-                <MaterialCommunityIcons name="close" size={24} color="#333" />
+                <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalScroll}>
-              <View style={styles.contentContainer}>
-                {currentQuestion.additionalInfo && (
-                  <Text style={styles.additionalInfo}>
-                    {currentQuestion.additionalInfo}
-                  </Text>
-                )}
-                <View style={styles.optionsContainer}>
-                  {currentQuestion.options.map((option, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.optionButton,
-                        option.type === 'Achievement' && styles.achievementOption
-                      ]}
-                      onPress={() => handleModalResponse(option)}
-                    >
-                      <Text style={[
-                        styles.optionText,
-                        option.type === 'Achievement' && styles.achievementOptionText
-                      ]}>
-                        {option.text}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+            
+            <ScrollView style={styles.modalScrollContainer}>
+              <Text style={styles.modalQuestion}>{currentQuestion.content}</Text>
+              
+              {/* Video tutorial button */}
+              <TouchableOpacity 
+                style={styles.watchVideoButton}
+                onPress={() => handleWatchVideo(currentQuestion.task.category)}
+              >
+                <MaterialIcons name="ondemand-video" size={20} color="#FFFFFF" />
+                <Text style={styles.watchVideoText}>{strings.watchTutorial}</Text>
+              </TouchableOpacity>
+              
+              {currentQuestion.additionalInfo && (
+                <Text style={styles.additionalInfo}>{currentQuestion.additionalInfo}</Text>
+              )}
+              
+              <View style={styles.optionsContainer}>
+                <Text style={styles.optionsTitle}>Select your answer:</Text>
+                {currentQuestion.options && currentQuestion.options.map((option, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.optionButton,
+                      option.type === 'Achievement' && styles.achievementOption
+                    ]}
+                    onPress={() => handleModalResponse(option)}
+                  >
+                    <Text style={styles.optionText}>{option.text}</Text>
+                    {option.type === 'Achievement' && (
+                      <View style={styles.achievementTag}>
+                        <MaterialIcons name="star" size={14} color="#FFD700" />
+                        <Text style={styles.achievementTagText}>Achievement</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
               </View>
             </ScrollView>
           </View>
@@ -318,26 +453,117 @@ const ChallengesContent = ({ route, navigation }) => {
     );
   };
 
-  const getTaskDescription = (task) => {
-    if (!task.text) {
-      switch (task.category) {
-        case 'dishwashing':
-          return 'Optimize your dishwashing routine to save water and energy. Follow recommended practices for maximum efficiency.';
-        case 'shower':
-          return 'Implement water-efficient shower practices to reduce consumption while maintaining comfort.';
-        case 'laundry':
-          return 'Make your laundry routine more water-efficient by following these best practices.';
-        case 'plumbing':
-          return 'Maintain your plumbing system efficiently to prevent water waste and reduce consumption.';
-        case 'daily':
-          return 'Adopt these daily water-saving habits to make a significant impact on your water footprint.';
-        case 'car':
-          return 'Use water-efficient methods for vehicle cleaning to minimize water waste.';
-        default:
-          return 'Complete this task to improve your water efficiency.';
-      }
+  const renderVideoModal = () => {
+    return (
+      <Modal
+        visible={showVideoModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowVideoModal(false)}
+      >
+        <View style={styles.videoModalContainer}>
+          <View style={styles.videoModalContent}>
+            <View style={styles.videoModalHeader}>
+              <Text style={styles.videoModalTitle}>{strings.watchTutorial}</Text>
+              <TouchableOpacity
+                style={styles.closeVideoButton}
+                onPress={() => setShowVideoModal(false)}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.webviewContainer}>
+              {videoUrl ? (
+                <WebView
+                  originWhitelist={['*']}
+                  source={{ html: videoUrl }}
+                  style={styles.webview}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                  allowsFullscreenVideo={true}
+                  mediaPlaybackRequiresUserAction={false}
+                  onError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('WebView error:', nativeEvent);
+                    Alert.alert(strings.error, strings.videoLoadError);
+                  }}
+                  onHttpError={(syntheticEvent) => {
+                    const { nativeEvent } = syntheticEvent;
+                    console.error('WebView HTTP Error:', nativeEvent);
+                    Alert.alert(strings.error, strings.videoLoadError);
+                  }}
+                  startInLoadingState={true}
+                  renderLoading={() => (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
+                  )}
+                />
+              ) : (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>Video cannot be loaded</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.videoDescription}>
+              Watch this educational video to learn more about water conservation techniques that can help you complete this challenge.
+            </Text>
+            
+            <TouchableOpacity
+              style={styles.returnToChallengeButton}
+              onPress={() => setShowVideoModal(false)}
+            >
+              <Text style={styles.returnToChallengeText}>Return to Challenge</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const getTaskEmoji = (category) => {
+    switch (category) {
+      case categoryIds.DISHWASHING:
+        return '🍽️';
+      case categoryIds.SHOWER:
+        return '🚿';
+      case categoryIds.LAUNDRY:
+        return '👕';
+      case categoryIds.PLUMBING:
+        return '🔧';
+      case categoryIds.DAILY:
+        return '📅';
+      case categoryIds.CAR:
+        return '🚗';
+      default:
+        return '💧';
     }
-    return task.text;
+  };
+
+  const getTaskDescription = (task) => {
+    const category = categories[task.category];
+    const categoryName = category ? category.title : task.category;
+    
+    // Find the original question
+    const question = questions.find(q => q.id === task.id);
+    if (!question) return task.description || 'Complete this task to reduce your water footprint.';
+
+    // Get the task option (the one with type 'Task')
+    const taskOption = question.options.find(opt => opt.type === 'Task');
+    if (!taskOption) return task.description || 'Complete this task to reduce your water footprint.';
+
+    // Get the achievement option (the one with type 'Achievement')
+    const achievementOption = question.options.find(opt => opt.type === 'Achievement');
+    
+    // Build the description
+    let description = `${question.text}\n\n`;
+    description += `Current situation: ${taskOption.text}\n`;
+    description += `Goal: ${achievementOption.text}\n\n`;
+    description += `This task is part of your ${categoryName} conservation plan. Tap to learn more and watch an educational video on this topic.`;
+    
+    return description;
   };
 
   if (loading) {
@@ -369,20 +595,10 @@ const ChallengesContent = ({ route, navigation }) => {
                 onPress={() => handleTaskPress(task)}
               >
                 <View style={styles.taskContent}>
-                  <MaterialCommunityIcons 
-                    name={task.completed ? "check-circle" : "circle-outline"}
-                    size={24} 
-                    color={task.completed ? "#4CAF50" : "#2196F3"} 
-                  />
+                  <Text style={styles.taskEmoji}>{getTaskEmoji(task.category)}</Text>
                   <View style={styles.taskTextContainer}>
-                    <Text style={styles.taskTitle}>
-                      {categories[task.category]?.title || task.category}
-                    </Text>
                     <Text style={styles.taskDescription}>
                       {getTaskDescription(task)}
-                    </Text>
-                    <Text style={styles.taskSaving}>
-                      Potential Water Savings: {task.waterUsage}L
                     </Text>
                   </View>
                 </View>
@@ -398,12 +614,51 @@ const ChallengesContent = ({ route, navigation }) => {
         )}
 
         {renderQuestionModal()}
+        {renderVideoModal()}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const AchievementsScreen = ({ achievements }) => {
+  const getAchievementIcon = (category) => {
+    switch (category) {
+      case categoryIds.DISHWASHING:
+        return 'dishwasher';
+      case categoryIds.SHOWER:
+        return 'shower';
+      case categoryIds.LAUNDRY:
+        return 'washing-machine';
+      case categoryIds.PLUMBING:
+        return 'water-pump';
+      case categoryIds.DAILY:
+        return 'calendar-check';
+      case categoryIds.CAR:
+        return 'car-wash';
+      default:
+        return 'water';
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case categoryIds.DISHWASHING:
+        return '#FF9800';
+      case categoryIds.SHOWER:
+        return '#2196F3';
+      case categoryIds.LAUNDRY:
+        return '#9C27B0';
+      case categoryIds.PLUMBING:
+        return '#F44336';
+      case categoryIds.DAILY:
+        return '#4CAF50';
+      case categoryIds.CAR:
+        return '#795548';
+      default:
+        return '#607D8B';
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -415,27 +670,35 @@ const AchievementsScreen = ({ achievements }) => {
           <View style={styles.section}>
             {achievements.map((achievement, index) => (
               <View key={index} style={styles.achievementCard}>
-                <MaterialCommunityIcons 
-                  name="trophy" 
-                  size={24} 
-                  color="#FFC107" 
-                />
+                <View style={[styles.achievementIconContainer, { backgroundColor: getCategoryColor(achievement.category) }]}>
+                  <MaterialCommunityIcons 
+                    name={getAchievementIcon(achievement.category)}
+                    size={24} 
+                    color="#FFFFFF" 
+                  />
+                </View>
                 <View style={styles.achievementContent}>
                   <Text style={styles.achievementTitle}>
-                    {achievement.subject || achievement.category}
+                    {categories[achievement.category]?.title || achievement.category}
                   </Text>
                   <Text style={styles.achievementDescription}>
-                    {achievement.text || achievement.description}
+                    {achievement.message}
                   </Text>
-                  <Text style={styles.achievementSaving}>
-                    Water saved: {achievement.waterUsage}L
-                  </Text>
+                  <View style={styles.achievementFooter}>
+                    <Text style={styles.achievementDate}>
+                      {new Date(achievement.date).toLocaleDateString()}
+                    </Text>
+                    <Text style={styles.achievementSaving}>
+                      Saved: {achievement.improvement}L
+                    </Text>
+                  </View>
                 </View>
               </View>
             ))}
           </View>
         ) : (
           <View style={styles.emptyContainer}>
+            <MaterialCommunityIcons name="trophy-outline" size={64} color="#2196F3" />
             <Text style={styles.emptyText}>
               Complete water-saving challenges to earn achievements!
             </Text>
@@ -547,7 +810,6 @@ const styles = StyleSheet.create({
   },
   achievementCard: {
     flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
@@ -557,19 +819,40 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  achievementIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   achievementContent: {
-    marginLeft: 16,
     flex: 1,
   },
   achievementTitle: {
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
     marginBottom: 4,
   },
   achievementDescription: {
     fontSize: 14,
     color: '#666',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  achievementFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  achievementDate: {
+    fontSize: 12,
+    color: '#999',
   },
   achievementSaving: {
     fontSize: 14,
@@ -586,265 +869,213 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
   },
   taskContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   taskTextContainer: {
-    marginLeft: 16,
     flex: 1,
   },
-  taskTitle: {
+  taskDescription: {
     fontSize: 16,
     color: '#333',
-    marginBottom: 4,
+    lineHeight: 24,
   },
-  taskSaving: {
-    fontSize: 14,
-    color: '#2196F3',
-    fontWeight: '500',
+  taskEmoji: {
+    fontSize: 28,
+    marginRight: 16,
+    width: 40,
+    textAlign: 'center',
+  },
+  completedTask: {
+    opacity: 0.7,
+    borderLeftColor: '#4CAF50',
   },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
+    marginTop: 16,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    minHeight: '80%',
+    maxHeight: '90%',
     width: '100%',
-    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#2196F3'
-  },
-  modalCloseButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFF'
-  },
-  modalScroll: {
-    flex: 1,
-  },
-  questionText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    marginRight: 16,
-  },
-  contentContainer: {
-    padding: 20,
-  },
-  contentMessage: {
-    fontSize: 16,
-    color: '#333',
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  additionalInfo: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  videoButton: {
     backgroundColor: '#2196F3',
     padding: 16,
-    borderRadius: 12,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  closeModalButton: {
+    padding: 4,
+  },
+  modalScrollContainer: {
+    padding: 20,
+  },
+  modalQuestion: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+  },
+  watchVideoButton: {
+    backgroundColor: '#2196F3',
+    padding: 14,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 16,
   },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  videoButtonText: {
+  watchVideoText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
+  },
+  additionalInfo: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
   },
   optionsContainer: {
-    padding: 20,
+    marginVertical: 16,
+  },
+  optionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
   },
   optionButton: {
     backgroundColor: '#E3F2FD',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: 10,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#2196F3',
+    borderColor: '#BBDEFB',
+  },
+  achievementOption: {
+    backgroundColor: '#FFF8E1',
+    borderColor: '#FFE082',
   },
   optionText: {
     fontSize: 16,
-    color: '#2196F3',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  achievementsContainer: {
-    marginBottom: 24,
-  },
-  achievementHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  achievementCategoryTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: 12,
-  },
-  achievementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E3F2FD',
-  },
-  achievementMessage: {
-    flex: 1,
-    fontSize: 14,
     color: '#333',
-    marginLeft: 12,
-    marginRight: 8,
+    marginBottom: 6,
   },
-  improvementValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#4CAF50',
-  },
-  tutorialContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  tutorialHeader: {
+  achievementTag: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 4,
+  },
+  achievementTagText: {
+    fontSize: 14,
+    color: '#FF8F00',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  videoModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
-    backgroundColor: '#1976D2',
   },
-  closeButton: {
-    padding: 8,
+  videoModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '80%',
+    overflow: 'hidden',
   },
-  tutorialTitle: {
-    color: '#FFF',
+  videoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  videoModalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    marginLeft: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeVideoButton: {
+    padding: 4,
+  },
+  webviewContainer: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 10,
+    overflow: 'hidden',
+    borderRadius: 8,
   },
   webview: {
-    flex: 1,
-    backgroundColor: '#000',
+    width: '100%',
+    height: '100%',
   },
-  tipsContainer: {
-    marginTop: 8,
-  },
-  areaContainer: {
-    marginBottom: 20,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  areaHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  areaTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFF',
-    marginLeft: 12,
-  },
-  tipCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E3F2FD',
-    backgroundColor: '#FFF',
-  },
-  tipContent: {
-    flex: 1,
-    marginRight: 16,
-  },
-  tipTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 4,
-  },
-  tipMessage: {
+  videoDescription: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
-  },
-  taskIcon: {
-    marginRight: 12,
-  },
-  taskTextContainer: {
-    flex: 1,
-  },
-  taskTitleCompleted: {
-    color: '#4CAF50',
-  },
-  taskMessage: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  startChallengeButton: {
-    backgroundColor: '#4CAF50',
     padding: 16,
+    lineHeight: 20,
+  },
+  returnToChallengeButton: {
+    backgroundColor: '#2196F3',
+    padding: 14,
     margin: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  startChallengeText: {
-    color: '#fff',
+  returnToChallengeText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  taskText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 8,
-    fontStyle: 'italic'
+  errorContainer: {
+    width: '100%',
+    height: '100%', 
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
-  achievementText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-    marginBottom: 8,
-    fontStyle: 'italic'
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+    textAlign: 'center',
   },
 }); 

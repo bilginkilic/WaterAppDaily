@@ -34,3 +34,14 @@ valueTotal değerlerini toplayarak o anki su ayak izi hesaplanır. Dolayısı il
 
 -eğer survey almıssa, kapat ac yaptıgında kaldıgı yerden acılmalı uygulama.
 challenges kısmındaki taska bastıgında soruyu tekrar sormalı eğer cevap tipi achıvements olursa, cevaplarında güncelleme yapılır ve bu soruya verdıgı cevap ıle degıstırılır. achıvements artar. challenges o madde icin kapanır yanı disabled gorunur. su ayak ızı son cevaplar uzerınden yenıden hesaplanır. veriler buna gore hem local hem de api üzerinden guncellenır
+
+- take challenge sayfasında, challengeların sıralandıgı yerde aktif olan tasklar güzel açıklayıcı olmalı. üzerine basıldıgında soru tekrar sorulmalı ve şıkların üzerinde video izleme butonu olmalı amaç videoyu izletmek ve bu konuda farkındalığını arttırdıktan sonra soruya cevap vermesini sağlamak. Eğer verdiği cevap type olarak achivements ise taskı basarı ıle tamamlamıs olacaktır.
+ 2. tabda yer alan achivements kısmı da açıklayıcı olmalı. achivements sayfasında kazandırdıgı suyun yazılmasına gerek yok. sadece motive edici bir yazı ile bu liste sunulabilir.
+
+  3. tabda da profil kısmı yer almaktadır.
+
+
+  - uygulamayı simulatorde test et. gerektiğinde yeniden install et. gerekmediğinde kendin restart et.
+  -uygulamada survey bir kez yapılabilir. 2. kez yapılamaz. dolayısıyla 1 kez survey alınmıssa ve giriş cıkıs yapılmıssa challenges kısmı acılmalıdır.
+
+  -waterapp, her gün sabah ve akşam, eğer task varsa, bir notifikasyon gostermelidir. amc taska girip videoyu izleyip taskı tamamlamasıdır.

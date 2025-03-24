@@ -26,7 +26,9 @@ class StorageService {
   static async getAchievements() {
     try {
       const achievements = await AsyncStorage.getItem(ACHIEVEMENTS_KEY);
-      return achievements ? JSON.parse(achievements) : [];
+      const parsedAchievements = achievements ? JSON.parse(achievements) : [];
+      console.log('Retrieved achievements:', parsedAchievements);
+      return parsedAchievements;
     } catch (error) {
       console.error('Error getting achievements:', error);
       return [];
@@ -35,7 +37,19 @@ class StorageService {
 
   static async saveAchievements(achievements) {
     try {
+      if (!Array.isArray(achievements)) {
+        console.error('Invalid achievements data:', achievements);
+        throw new Error('Achievements must be an array');
+      }
+
+      console.log('Saving achievements:', achievements);
       await AsyncStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
+      
+      // Verify the save was successful
+      const savedAchievements = await this.getAchievements();
+      console.log('Verified saved achievements:', savedAchievements);
+      
+      return true;
     } catch (error) {
       console.error('Error saving achievements:', error);
       throw error;
@@ -197,6 +211,149 @@ class StorageService {
       await AsyncStorage.clear();
     } catch (error) {
       console.error('Error clearing all data:', error);
+    }
+  }
+
+  static async initializeTasks() {
+    try {
+      const tasks = await this.getTasks();
+      const { categories } = require('../data/categories');
+      const validCategoryIds = Object.keys(categories);
+      
+      // Filter out tasks with invalid categories
+      const validTasks = tasks.filter(task => {
+        const isValid = validCategoryIds.includes(task.category);
+        if (!isValid) {
+          console.warn(`Removing task with invalid category: ${task.category}`);
+        }
+        return isValid;
+      });
+
+      if (validTasks.length !== tasks.length) {
+        console.log('Some tasks had invalid categories and were removed');
+        await this.saveTasks(validTasks);
+      }
+
+      return validTasks;
+    } catch (error) {
+      console.error('Error initializing tasks:', error);
+      return [];
+    }
+  }
+
+  static async validateAndUpdateTasks() {
+    try {
+      const tasks = await this.getTasks();
+      const { categories } = require('../data/categories');
+      const validCategoryIds = Object.keys(categories);
+      
+      let hasInvalidCategories = false;
+      const updatedTasks = tasks.map(task => {
+        if (!validCategoryIds.includes(task.category)) {
+          console.warn(`Invalid category found: ${task.category}, updating to 'daily'`);
+          hasInvalidCategories = true;
+          return {
+            ...task,
+            category: 'daily'
+          };
+        }
+        return task;
+      });
+
+      if (hasInvalidCategories) {
+        console.log('Saving updated tasks with valid categories...');
+        await this.saveTasks(updatedTasks);
+      }
+
+      return updatedTasks;
+    } catch (error) {
+      console.error('Error validating tasks:', error);
+      return [];
+    }
+  }
+
+  static async updateTaskProgress(updatedTask) {
+    try {
+      // Get all tasks
+      const allTasks = await this.getTasks();
+      
+      // Find the index of the task to update
+      const taskIndex = allTasks.findIndex(task => task.id === updatedTask.id);
+      
+      if (taskIndex === -1) {
+        console.warn(`Task with id ${updatedTask.id} not found`);
+        return false;
+      }
+      
+      // Update the task
+      allTasks[taskIndex] = updatedTask;
+      
+      // Save updated tasks
+      await this.saveTasks(allTasks);
+      console.log(`Task ${updatedTask.id} updated successfully`);
+      return true;
+    } catch (error) {
+      console.error('Error updating task progress:', error);
+      return false;
+    }
+  }
+
+  static async getAnswers() {
+    try {
+      const answers = await AsyncStorage.getItem('surveyAnswers');
+      return answers ? JSON.parse(answers) : [];
+    } catch (error) {
+      console.error('Error getting survey answers:', error);
+      return [];
+    }
+  }
+
+  static async saveAnswers(answers) {
+    try {
+      await AsyncStorage.setItem('surveyAnswers', JSON.stringify(answers));
+    } catch (error) {
+      console.error('Error saving survey answers:', error);
+      throw error;
+    }
+  }
+
+  static async ensureWaterProfile() {
+    try {
+      const profile = await this.getWaterProfile();
+      if (!profile) {
+        const defaultProfile = {
+          initialWaterprint: 0,
+          currentWaterprint: 0,
+          totalReduction: 0,
+          previousUsage: 0,
+          additionalUsage: 0,
+          lastUpdated: new Date().toISOString()
+        };
+        console.log('Creating default water profile:', defaultProfile);
+        await this.saveWaterProfile(defaultProfile);
+        return defaultProfile;
+      }
+      return profile;
+    } catch (error) {
+      console.error('Error ensuring water profile exists:', error);
+      return {
+        initialWaterprint: 0,
+        currentWaterprint: 0,
+        totalReduction: 0,
+        previousUsage: 0,
+        additionalUsage: 0,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+  }
+
+  static async getToken() {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      return token;
+    } catch (error) {
+      console.error('Error getting token:', error);
+      return null;
     }
   }
 }

@@ -18,8 +18,9 @@ function AppContent() {
   const { isLoading, userToken } = useAuth();
 
   useEffect(() => {
-    const initializeLanguage = async () => {
+    const initialize = async () => {
       try {
+        // Initialize language
         const savedLanguage = await AsyncStorage.getItem('userLanguage');
         if (savedLanguage) {
           strings.setLanguage(savedLanguage);
@@ -27,19 +28,23 @@ function AppContent() {
           strings.setLanguage('en');
           await AsyncStorage.setItem('userLanguage', 'en');
         }
+
+        // Initialize and validate tasks
+        const StorageService = require('./src/services/StorageService').default;
+        await StorageService.initializeTasks();
+        await StorageService.validateAndUpdateTasks();
       } catch (error) {
-        console.error('Language initialization error:', error);
-        strings.setLanguage('en');
+        console.error('Initialization error:', error);
       }
     };
 
-    initializeLanguage();
+    initialize();
   }, []);
 
   useEffect(() => {
-    // Günlük hatırlatmaları başlat
-    NotificationService.scheduleReminderNotification(10, 0); // Sabah 10:00
-    NotificationService.scheduleMotivationalNotification(18, 0); // Akşam 18:00
+    // Schedule daily reminders
+    NotificationService.scheduleReminderNotification(10, 0); // Morning 10:00
+    NotificationService.scheduleMotivationalNotification(18, 0); // Evening 18:00
   }, []);
 
   if (isLoading) {

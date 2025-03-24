@@ -40,7 +40,7 @@ export const ProfileScreen = ({ route, navigation }) => {
 
   const loadData = async () => {
     if (!user?.id || !token) {
-      setError('Kullanıcı bilgileri bulunamadı');
+      setError('User information not found');
       setIsLoading(false);
       return;
     }
@@ -49,7 +49,7 @@ export const ProfileScreen = ({ route, navigation }) => {
       setIsLoading(true);
       setError(null);
 
-      // Yerel depolamadan su ayak izi verilerini yükle
+      // Load water footprint data from local storage
       const waterProfile = await AsyncStorage.getItem('userWaterProfile');
       if (waterProfile) {
         const profile = JSON.parse(waterProfile);
@@ -60,7 +60,7 @@ export const ProfileScreen = ({ route, navigation }) => {
         });
       }
 
-      // API'den ilerleme verilerini al
+      // Get progress data from API
       const response = await fetch(`${API_URL}/waterprint/progress/${user.id}`, {
         method: 'GET',
         headers: {
@@ -70,30 +70,30 @@ export const ProfileScreen = ({ route, navigation }) => {
       });
 
       if (!response.ok) {
-        throw new Error('İlerleme verileri alınamadı');
+        throw new Error('Could not retrieve progress data');
       }
 
       const data = await response.json();
       console.log('Progress data:', data);
 
-      // İlerleme verilerini işle
+      // Process progress data
       if (data.progressHistory && data.progressHistory.length > 0) {
         const labels = data.progressHistory.map(item => 
-          new Date(item.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
+          new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
         );
         const values = data.progressHistory.map(item => item.waterprint);
 
         setDailySavings({
-          labels: labels.slice(-7), // Son 7 gün
+          labels: labels.slice(-7), // Last 7 days
           data: values.slice(-7)
         });
 
-        // Toplam tasarruf
+        // Total savings
         if (data.waterprintReduction) {
           setTotalSavings(data.waterprintReduction);
         }
 
-        // Güncel su ayak izi
+        // Current water footprint
         if (data.currentWaterprint) {
           setWaterFootprint(prev => ({
             ...prev,
@@ -119,8 +119,15 @@ export const ProfileScreen = ({ route, navigation }) => {
       });
     } catch (error) {
       console.error('Sign out error:', error);
-      Alert.alert('Hata', 'Çıkış yapılırken bir hata oluştu');
+      Alert.alert('Error', 'An error occurred while signing out');
     }
+  };
+
+  // Calculate water footprint reduction percentage
+  const calculateReductionPercentage = () => {
+    if (!waterFootprint.initial || waterFootprint.initial === 0) return 0;
+    const reduction = waterFootprint.initial - waterFootprint.current;
+    return Math.round((reduction / waterFootprint.initial) * 100);
   };
 
   if (isLoading) {
@@ -134,7 +141,7 @@ export const ProfileScreen = ({ route, navigation }) => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Merhaba, {user?.name || 'Kullanıcı'}</Text>
+        <Text style={styles.welcomeText}>Hello, {user?.name || 'User'}</Text>
         <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
           <MaterialCommunityIcons name="logout" size={24} color="#666" />
         </TouchableOpacity>
@@ -146,35 +153,48 @@ export const ProfileScreen = ({ route, navigation }) => {
         </View>
       ) : (
         <>
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Başlangıç Su Ayak İzi</Text>
-              <Text style={styles.statValue}>
-                {(waterFootprint.initial || 0).toFixed(1)} L
-              </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Güncel Su Ayak İzi</Text>
-              <Text style={styles.statValue}>
-                {(waterFootprint.current || 0).toFixed(1)} L
-              </Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Toplam Tasarruf</Text>
-              <Text style={styles.statValue}>
-                {(totalSavings || 0).toFixed(1)} L
-              </Text>
+          {/* Water Footprint Summary Card */}
+          <View style={styles.waterFootprintCard}>
+            <Text style={styles.waterFootprintTitle}>Your Water Footprint</Text>
+            <View style={styles.waterFootprintContent}>
+              <View style={styles.percentageContainer}>
+                <Text style={styles.percentageValue}>{calculateReductionPercentage()}%</Text>
+                <Text style={styles.percentageLabel}>Reduction</Text>
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.footprintDetails}>
+                <View style={styles.footprintItem}>
+                  <Text style={styles.footprintItemLabel}>Initial</Text>
+                  <Text style={styles.footprintItemValue}>{(waterFootprint.initial || 0).toFixed(1)}L</Text>
+                </View>
+                <View style={styles.footprintItem}>
+                  <Text style={styles.footprintItemLabel}>Current</Text>
+                  <Text style={[
+                    styles.footprintItemValue, 
+                    styles.currentValue
+                  ]}>{(waterFootprint.current || 0).toFixed(1)}L</Text>
+                </View>
+                <View style={styles.footprintItem}>
+                  <Text style={styles.footprintItemLabel}>Saved</Text>
+                  <Text style={[
+                    styles.footprintItemValue, 
+                    styles.savedValue
+                  ]}>{(totalSavings || 0).toFixed(1)}L</Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {dailySavings.labels.length > 0 && (
             <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Son 7 Günlük Su Tüketimi</Text>
+              <Text style={styles.chartTitle}>Water Usage - Last 7 Days</Text>
               <LineChart
                 data={{
                   labels: dailySavings.labels,
                   datasets: [{
-                    data: dailySavings.data
+                    data: dailySavings.data,
+                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                    strokeWidth: 2
                   }]
                 }}
                 width={Dimensions.get('window').width - 40}
@@ -184,9 +204,15 @@ export const ProfileScreen = ({ route, navigation }) => {
                   backgroundGradientFrom: '#ffffff',
                   backgroundGradientTo: '#ffffff',
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
                   style: {
                     borderRadius: 16
+                  },
+                  propsForDots: {
+                    r: "6",
+                    strokeWidth: "2",
+                    stroke: "#2196F3"
                   }
                 }}
                 style={styles.chart}
@@ -198,8 +224,28 @@ export const ProfileScreen = ({ route, navigation }) => {
           <View style={styles.potentialContainer}>
             <MaterialCommunityIcons name="water-percent" size={24} color="#2196F3" />
             <Text style={styles.potentialText}>
-              Potansiyel Tasarruf: {(waterFootprint.potentialSaving || 0).toFixed(1)} L/gün
+              Potential Savings: {(waterFootprint.potentialSaving || 0).toFixed(1)} L/day
             </Text>
+          </View>
+          
+          {/* How Water Footprint Works Card */}
+          <View style={styles.infoCard}>
+            <Text style={styles.infoCardTitle}>How Your Water Footprint is Calculated</Text>
+            <Text style={styles.infoText}>
+              Your water footprint is calculated based on your responses to the survey questions. Each time you complete a challenge task, your water footprint is recalculated based on your new water usage habits.
+            </Text>
+            <View style={styles.infoPoint}>
+              <MaterialCommunityIcons name="check-circle" size={18} color="#4CAF50" />
+              <Text style={styles.infoPointText}>The more challenges you complete, the more your water footprint decreases</Text>
+            </View>
+            <View style={styles.infoPoint}>
+              <MaterialCommunityIcons name="check-circle" size={18} color="#4CAF50" />
+              <Text style={styles.infoPointText}>Each achievement represents a sustainable water-saving habit you've adopted</Text>
+            </View>
+            <View style={styles.infoPoint}>
+              <MaterialCommunityIcons name="check-circle" size={18} color="#4CAF50" />
+              <Text style={styles.infoPointText}>Progress is tracked and synced with our servers to maintain your data across devices</Text>
+            </View>
           </View>
         </>
       )}
@@ -224,6 +270,13 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: '#FFFFFF',
     marginTop: 20,
+    marginHorizontal: 16,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   welcomeText: {
     fontSize: 24,
@@ -241,63 +294,149 @@ const styles = StyleSheet.create({
     color: '#f44336',
     fontSize: 16,
   },
-  statsContainer: {
-    flexDirection: 'column',
-    padding: 20,
-    gap: 16,
-  },
-  statCard: {
+  waterFootprintCard: {
     backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    margin: 16,
     padding: 20,
-    borderRadius: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  statLabel: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 24,
+  waterFootprintTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  waterFootprintContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  percentageContainer: {
+    alignItems: 'center',
+    padding: 12,
+  },
+  percentageValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  percentageLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  divider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: '#E0E0E0',
+  },
+  footprintDetails: {
+    flex: 1,
+    marginLeft: 20,
+  },
+  footprintItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  footprintItemLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  footprintItemValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  currentValue: {
     color: '#2196F3',
   },
+  savedValue: {
+    color: '#4CAF50',
+  },
   chartContainer: {
+    margin: 16,
     backgroundColor: '#FFFFFF',
-    padding: 20,
-    margin: 20,
-    borderRadius: 16,
-    elevation: 3,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 2,
   },
   chartTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
     marginBottom: 16,
+    textAlign: 'center',
   },
   chart: {
+    borderRadius: 12,
     marginVertical: 8,
-    borderRadius: 16,
   },
   potentialContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    margin: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   potentialText: {
-    marginLeft: 12,
+    color: '#333',
     fontSize: 16,
-    color: '#1976D2',
+    fontWeight: '500',
+    marginLeft: 12,
   },
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 30,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  infoCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  infoPoint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  infoPointText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 20,
+  }
 }); 
