@@ -577,9 +577,11 @@ const ChallengesContent = ({ route, navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Water Conservation Challenges</Text>
-          <Text style={styles.subtitle}>Complete these tasks to reduce your water footprint and make a positive environmental impact</Text>
+        <View style={styles.challengeHeader}>
+          <Text style={styles.challengeTitle}>Your Water-Saving Journey</Text>
+          <Text style={styles.challengeSubtitle}>
+            Complete these challenges to reduce your water footprint. Watch the educational videos and make sustainable choices to earn achievements.
+          </Text>
         </View>
 
         {/* Show Active Tasks */}
@@ -659,13 +661,19 @@ const AchievementsScreen = ({ achievements }) => {
     }
   };
 
+  const getAchievementDescription = (achievement) => {
+    const question = questions.find(q => q.id === achievement.id);
+    if (!question) return achievement.message;
+
+    const achievementOption = question.options.find(opt => opt.type === 'Achievement');
+    if (!achievementOption) return achievement.message;
+
+    return `${question.text}\n\nYou've achieved: ${achievementOption.text}\n\nThis achievement helps you save ${achievement.improvement}L of water.`;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Water Saving Achievements</Text>
-          <Text style={styles.subtitle}>Your completed water-saving milestones</Text>
-        </View>
         {achievements.length > 0 ? (
           <View style={styles.section}>
             {achievements.map((achievement, index) => (
@@ -682,7 +690,7 @@ const AchievementsScreen = ({ achievements }) => {
                     {categories[achievement.category]?.title || achievement.category}
                   </Text>
                   <Text style={styles.achievementDescription}>
-                    {achievement.message}
+                    {getAchievementDescription(achievement)}
                   </Text>
                   <View style={styles.achievementFooter}>
                     <Text style={styles.achievementDate}>
@@ -739,6 +747,7 @@ export const ChallengesScreen = ({ route, navigation }) => {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -1077,5 +1086,27 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 16,
     textAlign: 'center',
+  },
+  challengeHeader: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  challengeTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    marginBottom: 8,
+  },
+  challengeSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
 }); 
