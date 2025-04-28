@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import strings from '../localization/strings';
-import { LineChart } from 'react-native-chart-kit';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { StorageService } from '../services';
 import { useAuth } from '../context/AuthContext';
@@ -22,14 +21,9 @@ const API_URL = 'https://waterappdashboard2.onrender.com/api';
 export const ProfileScreen = ({ route, navigation }) => {
   const { user, token, signOut } = useAuth();
   const [totalSavings, setTotalSavings] = useState(0);
-  const [dailySavings, setDailySavings] = useState({
-    labels: [],
-    data: []
-  });
   const [waterFootprint, setWaterFootprint] = useState({
     initial: 0,
-    current: 0,
-    potentialSaving: 0
+    current: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -55,8 +49,7 @@ export const ProfileScreen = ({ route, navigation }) => {
         const profile = JSON.parse(waterProfile);
         setWaterFootprint({
           initial: profile.initialWaterprint,
-          current: profile.dailyUsage,
-          potentialSaving: profile.potentialSaving
+          current: profile.dailyUsage
         });
       }
 
@@ -78,16 +71,6 @@ export const ProfileScreen = ({ route, navigation }) => {
 
       // Process progress data
       if (data.progressHistory && data.progressHistory.length > 0) {
-        const labels = data.progressHistory.map(item => 
-          new Date(item.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
-        );
-        const values = data.progressHistory.map(item => item.waterprint);
-
-        setDailySavings({
-          labels: labels.slice(-7), // Last 7 days
-          data: values.slice(-7)
-        });
-
         // Total savings
         if (data.waterprintReduction) {
           setTotalSavings(data.waterprintReduction);
@@ -184,49 +167,6 @@ export const ProfileScreen = ({ route, navigation }) => {
               </View>
             </View>
           </View>
-
-          {dailySavings.labels.length > 0 && (
-            <View style={styles.chartContainer}>
-              <Text style={styles.chartTitle}>Water Usage - Last 7 Days</Text>
-              <LineChart
-                data={{
-                  labels: dailySavings.labels,
-                  datasets: [{
-                    data: dailySavings.data,
-                    color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
-                    strokeWidth: 2
-                  }]
-                }}
-                width={Dimensions.get('window').width - 40}
-                height={220}
-                chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: "6",
-                    strokeWidth: "2",
-                    stroke: "#2196F3"
-                  }
-                }}
-                style={styles.chart}
-                bezier
-              />
-            </View>
-          )}
-
-          <View style={styles.potentialContainer}>
-            <MaterialCommunityIcons name="water-percent" size={24} color="#2196F3" />
-            <Text style={styles.potentialText}>
-              Potential Savings: {(waterFootprint.potentialSaving || 0).toFixed(1)} L/day
-            </Text>
-          </View>
           
           {/* How Water Footprint Works Card */}
           <View style={styles.infoCard}>
@@ -258,47 +198,44 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F0F9FF',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#FFFFFF',
-    marginTop: 20,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E3F2FD',
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
   },
   signOutButton: {
     padding: 8,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+  },
   errorContainer: {
     padding: 20,
-    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    margin: 20,
+    borderRadius: 12,
   },
   errorText: {
-    color: '#f44336',
+    color: '#D32F2F',
     fontSize: 16,
   },
   waterFootprintCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    margin: 16,
+    margin: 20,
     padding: 20,
+    borderRadius: 16,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -307,52 +244,46 @@ const styles = StyleSheet.create({
   },
   waterFootprintTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#333',
     marginBottom: 16,
-    textAlign: 'center',
   },
   waterFootprintContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
   },
   percentageContainer: {
     alignItems: 'center',
-    padding: 12,
+    marginRight: 20,
   },
   percentageValue: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: '#2196F3',
   },
   percentageLabel: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
   divider: {
     width: 1,
-    height: '80%',
-    backgroundColor: '#E0E0E0',
+    height: 60,
+    backgroundColor: '#E3F2FD',
+    marginRight: 20,
   },
   footprintDetails: {
     flex: 1,
-    marginLeft: 20,
   },
   footprintItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 4,
+    marginBottom: 8,
   },
   footprintItemLabel: {
     fontSize: 14,
     color: '#666',
   },
   footprintItemValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#333',
   },
   currentValue: {
@@ -361,82 +292,39 @@ const styles = StyleSheet.create({
   savedValue: {
     color: '#4CAF50',
   },
-  chartContainer: {
-    margin: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  chart: {
-    borderRadius: 12,
-    marginVertical: 8,
-  },
-  potentialContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  potentialText: {
-    color: '#333',
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 12,
-  },
   infoCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    margin: 20,
     padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 30,
-    elevation: 2,
+    borderRadius: 16,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
   },
   infoCardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   infoText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#666',
-    lineHeight: 20,
     marginBottom: 16,
+    lineHeight: 24,
   },
   infoPoint: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   infoPointText: {
-    fontSize: 14,
-    color: '#333',
-    marginLeft: 8,
     flex: 1,
-    lineHeight: 20,
-  }
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#666',
+    lineHeight: 22,
+  },
 }); 

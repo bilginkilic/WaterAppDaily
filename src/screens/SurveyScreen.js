@@ -202,6 +202,10 @@ export const SurveyScreen = ({ navigation }) => {
   }, []); // Run only once when component mounts
 
   const currentQ = questions[currentQuestion];
+  if (!currentQ || !currentQ.text) {
+    console.error('Current question is undefined or missing text property');
+    return null; // veya uygun bir hata mesajı göster
+  }
 
   return (
     <SafeAreaView style={styles.container}>
