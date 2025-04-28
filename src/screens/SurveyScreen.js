@@ -107,7 +107,9 @@ export const SurveyScreen = ({ navigation }) => {
       const formattedAnswers = answers.map(answer => ({
         questionId: answer.questionId,
         answer: answer.answer.text,
-        isCorrect: answer.answer.type === 'Achievement'
+        isCorrect: answer.answer.type === 'Achievement',
+        valueTotal: answer.answer.valueTotal || 0,
+        type: answer.answer.type
       }));
 
       console.log('\n=== SURVEY COMPLETED ===');

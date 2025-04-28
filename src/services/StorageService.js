@@ -324,19 +324,19 @@ class StorageService {
 
   static async getAnswers() {
     try {
-      const answers = await AsyncStorage.getItem('surveyAnswers');
+      const answers = await AsyncStorage.getItem('answers');
       return answers ? JSON.parse(answers) : [];
     } catch (error) {
-      console.error('Error getting survey answers:', error);
+      console.error('Error getting answers:', error);
       return [];
     }
   }
 
   static async saveAnswers(answers) {
     try {
-      await AsyncStorage.setItem('surveyAnswers', JSON.stringify(answers));
+      await AsyncStorage.setItem('answers', JSON.stringify(answers));
     } catch (error) {
-      console.error('Error saving survey answers:', error);
+      console.error('Error saving answers:', error);
       throw error;
     }
   }

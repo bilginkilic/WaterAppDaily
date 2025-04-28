@@ -566,81 +566,8 @@ const ChallengesContent = ({ route, navigation }) => {
     return description;
   };
 
-  const testApp = async () => {
-    try {
-      // Reset all user data
-      await StorageService.resetUserData();
-      console.log('User data reset complete');
-
-      // Test survey flow
-      const testAnswers = [
-        {
-          questionId: '1',
-          answer: 'No',
-          waterprintValue: 126,
-          type: 'Task'
-        },
-        {
-          questionId: '2',
-          answer: 'Yes',
-          waterprintValue: 36,
-          type: 'Task'
-        }
-      ];
-
-      await StorageService.saveAnswers(testAnswers);
-      console.log('Test answers saved');
-
-      // Test tasks
-      const testTasks = [
-        {
-          id: '1',
-          category: categoryIds.DISHWASHING,
-          description: 'Test task 1',
-          completed: false
-        },
-        {
-          id: '2',
-          category: categoryIds.DISHWASHING,
-          description: 'Test task 2',
-          completed: false
-        }
-      ];
-
-      await StorageService.saveTasks(testTasks);
-      console.log('Test tasks saved');
-
-      // Test water profile
-      const testProfile = {
-        initialWaterprint: 162,
-        currentWaterprint: 162,
-        waterprintReduction: 0,
-        completedTasks: [],
-        progressHistory: [
-          {
-            date: new Date(),
-            waterprint: 162
-          }
-        ]
-      };
-
-      await StorageService.saveProgress(testProfile);
-      console.log('Test water profile saved');
-
-      // Reload data
-      await loadData();
-      console.log('Data reloaded');
-
-      Alert.alert(
-        'Test Complete',
-        'App has been reset and test data has been loaded. You can now test the full flow.',
-        [{ text: 'OK' }]
-      );
-    } catch (error) {
-      console.error('Error in testApp:', error);
-      Alert.alert('Test Error', 'Failed to reset and load test data.');
-    }
-  };
+   
+ 
 
   // Add test button to header
   useEffect(() => {
@@ -758,7 +685,7 @@ const AchievementsScreen = ({ achievements }) => {
     const achievementOption = question.options.find(opt => opt.type === 'Achievement');
     if (!achievementOption) return achievement.message;
 
-    return `${question.text}\n\nYou've achieved: ${achievementOption.text}\n\nThis achievement helps you save ${achievement.improvement}L of water.`;
+    return `${question.text}\n\nYou've achieved: ${achievementOption.text}\n\n `;
   };
 
   return (
@@ -786,9 +713,7 @@ const AchievementsScreen = ({ achievements }) => {
                     <Text style={styles.achievementDate}>
                       {new Date(achievement.date).toLocaleDateString()}
                     </Text>
-                    <Text style={styles.achievementSaving}>
-                      Saved: {achievement.improvement}L
-                    </Text>
+                    
                   </View>
                 </View>
               </View>
