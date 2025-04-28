@@ -566,6 +566,96 @@ const ChallengesContent = ({ route, navigation }) => {
     return description;
   };
 
+  const testApp = async () => {
+    try {
+      // Reset all user data
+      await StorageService.resetUserData();
+      console.log('User data reset complete');
+
+      // Test survey flow
+      const testAnswers = [
+        {
+          questionId: '1',
+          answer: 'No',
+          waterprintValue: 126,
+          type: 'Task'
+        },
+        {
+          questionId: '2',
+          answer: 'Yes',
+          waterprintValue: 36,
+          type: 'Task'
+        }
+      ];
+
+      await StorageService.saveAnswers(testAnswers);
+      console.log('Test answers saved');
+
+      // Test tasks
+      const testTasks = [
+        {
+          id: '1',
+          category: categoryIds.DISHWASHING,
+          description: 'Test task 1',
+          completed: false
+        },
+        {
+          id: '2',
+          category: categoryIds.DISHWASHING,
+          description: 'Test task 2',
+          completed: false
+        }
+      ];
+
+      await StorageService.saveTasks(testTasks);
+      console.log('Test tasks saved');
+
+      // Test water profile
+      const testProfile = {
+        initialWaterprint: 162,
+        currentWaterprint: 162,
+        waterprintReduction: 0,
+        completedTasks: [],
+        progressHistory: [
+          {
+            date: new Date(),
+            waterprint: 162
+          }
+        ]
+      };
+
+      await StorageService.saveProgress(testProfile);
+      console.log('Test water profile saved');
+
+      // Reload data
+      await loadData();
+      console.log('Data reloaded');
+
+      Alert.alert(
+        'Test Complete',
+        'App has been reset and test data has been loaded. You can now test the full flow.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error in testApp:', error);
+      Alert.alert('Test Error', 'Failed to reset and load test data.');
+    }
+  };
+
+  // Add test button to header
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={testApp}
+          style={{ marginRight: 16 }}
+        >
+          <MaterialCommunityIcons name="refresh" size={24} color="#2196F3" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>

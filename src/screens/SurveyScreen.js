@@ -129,8 +129,14 @@ export const SurveyScreen = ({ navigation }) => {
       // Save initial survey data
       await StorageService.saveInitialSurvey({
         answers: formattedAnswers,
-        correctAnswersCount
+        correctAnswersCount,
+        totalWaterFootprint: surveyResults.totalWaterFootprint,
+        tasks: surveyResults.tasks,
+        achievements: surveyResults.achievements
       });
+
+      // Save survey results
+      await StorageService.saveSurveyResults(surveyResults);
 
       // Navigate to results screen with all required data
       navigation.reset({
@@ -145,17 +151,28 @@ export const SurveyScreen = ({ navigation }) => {
                 totalWaterFootprint: surveyResults.totalWaterFootprint,
                 improvementAreas,
                 answers: formattedAnswers,
-                correctAnswersCount: correctAnswersCount // Achievements sayısı
+                correctAnswersCount
               }
             }
           }
         ]
       });
     } catch (error) {
-      console.error('Error saving survey:', error);
+      console.error('Error completing survey:', error);
       Alert.alert(
         'Error',
-        'Failed to complete survey. Please try again.'
+        'Failed to complete survey. Please try again.',
+        [
+          {
+            text: 'Try Again',
+            onPress: () => handleSurveyComplete()
+          },
+          {
+            text: 'Cancel',
+            onPress: () => navigation.goBack(),
+            style: 'cancel'
+          }
+        ]
       );
     }
   };

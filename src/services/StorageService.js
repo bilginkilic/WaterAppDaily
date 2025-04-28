@@ -116,9 +116,21 @@ class StorageService {
 
   static async saveSurveyResults(results) {
     try {
+      if (!results) {
+        throw new Error('Invalid survey results data');
+      }
+
+      console.log('Saving survey results:', results);
       await AsyncStorage.setItem('surveyResults', JSON.stringify(results));
+      
+      // Verify the save was successful
+      const savedResults = await this.getSurveyResults();
+      console.log('Verified saved survey results:', savedResults);
+      
+      return true;
     } catch (error) {
       console.error('Error saving survey results:', error);
+      throw error;
     }
   }
 
@@ -162,9 +174,21 @@ class StorageService {
 
   static async saveInitialSurvey(surveyData) {
     try {
+      if (!surveyData) {
+        throw new Error('Invalid survey data');
+      }
+
+      console.log('Saving initial survey:', surveyData);
       await AsyncStorage.setItem('initialSurvey', JSON.stringify(surveyData));
+      
+      // Verify the save was successful
+      const savedSurvey = await this.getInitialSurvey();
+      console.log('Verified saved initial survey:', savedSurvey);
+      
+      return true;
     } catch (error) {
       console.error('Error saving initial survey:', error);
+      throw error;
     }
   }
 
@@ -354,6 +378,27 @@ class StorageService {
     } catch (error) {
       console.error('Error getting token:', error);
       return null;
+    }
+  }
+
+  static async resetUserData() {
+    try {
+      // Clear all user-related data
+      await AsyncStorage.multiRemove([
+        TASKS_KEY,
+        ACHIEVEMENTS_KEY,
+        WATER_PROFILE_KEY,
+        'answers',
+        'progress',
+        'surveyResults',
+        'initialSurvey',
+        'token'
+      ]);
+      console.log('All user data has been reset successfully');
+      return true;
+    } catch (error) {
+      console.error('Error resetting user data:', error);
+      return false;
     }
   }
 }
