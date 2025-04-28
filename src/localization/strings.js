@@ -2,8 +2,8 @@ import LocalizedStrings from 'react-native-localization';
 
 const strings = new LocalizedStrings({
   en: {
-    welcome: "WaterSave",
-    slogan: "Every Drop Counts Towards a Sustainable Future",
+    welcome: "WaterApp V2",
+    slogan: "Green Office Certification",
     email: "Email",
     password: "Password",
     login: "Login",
