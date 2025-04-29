@@ -1,0 +1,102 @@
+Data Service Rules for Centralized Data Management
+This document outlines the service rules for managing local data in a centralized manner. The goal is to ensure consistent data handling, storage, and retrieval across the application, maintaining a single source of truth for all data operations.
+Objective
+Centralize local data management to:
+
+Read and save data through a single service.
+Ensure consistent and reliable responses from a unified dataset.
+Record survey responses and manage related data structures (Tasks, Achievements, Water Footprint).
+
+Data Sources
+
+Questions: Referenced from src/data/questions.js.
+
+Service Operations
+User Login
+When a user successfully logs into the application, the service will be called to set the following data:
+
+Email: The email address used for login.
+LoggedIn: true.
+SurveyTaken: false.
+
+Survey Response Handling
+Survey responses will be recorded through this service as users select options. The data will be stored in an array called SurveyAnswersInit with the following structure for each response:
+
+Question ID: The ID of the question.
+Answer: The selected answer.
+ValueTotal: The total value of the answer.
+Type: The type of the answer (e.g., Task or Achievement).
+ValueSaving: The saving value of the answer.
+Timestamp: The time the response was recorded.
+
+Arrays
+
+Tasks Array: Stores responses classified as Tasks.
+Structure: { questionId, answer, valueTotal, type, valueSaving, timestamp }.
+
+
+Achievements Array: Stores responses classified as Achievements.
+Structure: { questionId, answer, valueTotal, type, valueSaving, timestamp }.
+
+
+
+Responses are assigned to either the Tasks or Achievements array based on their type.
+Functions
+InitialWaterFootPrint()
+
+Description: Calculates the initial water footprint based on survey responses.
+Logic: Sums the valueTotal of all responses in SurveyAnswersInit.
+Return: The calculated water footprint value.
+
+Tasks()
+
+Description: Retrieves all Task items.
+Logic: Returns the entire Tasks array.
+Return: Array of Task objects.
+
+Achievements()
+
+Description: Retrieves all Achievement items.
+Logic: Returns the entire Achievements array.
+Return: Array of Achievement objects.
+
+TaskToAchievements(task)
+
+Description: Converts a Task to an Achievement upon successful completion.
+Logic:
+Removes the specified Task from the Tasks array.
+Adds the Task to the Achievements array with the following data:
+questionId, answer, valueTotal, type, valueSaving (from the original Task).
+timestamp: The time of conversion.
+
+
+Uses Achievement-related data provided from the selected option (e.g., question ID, answer, valueTotal, type, valueSaving).
+
+
+Return: Updated Achievements array.
+
+CurrentWaterFootPrint()
+
+Description: Calculates the current water footprint based on Tasks and Achievements.
+Logic: Sums the valueTotal of all items in both Tasks and Achievements arrays.
+Return: The current water footprint value.
+
+TakeChallenge()
+
+Description: Initiates a challenge (to be implemented based on specific requirements).
+Logic: Placeholder for challenge-related logic (e.g., starting a new survey or task).
+Return: TBD (based on implementation).
+
+Usage in Application
+
+Display and Storage: All screens displaying or recording data will interact with this service.
+Survey Interaction: As users select survey options, responses are sent to the service for storage in SurveyAnswersInit and assigned to Tasks or Achievements based on type.
+Data Consistency: Ensures all data operations (read/write) are performed through this service to maintain a single, consistent dataset.
+
+Notes
+
+Ensure all data operations are atomic to prevent data inconsistencies.
+Validate response data before storing (e.g., check for valid questionId, type, etc.).
+Consider implementing error handling for edge cases (e.g., missing questions in src/data/questions.js).
+Timestamps should use a consistent format (e.g., ISO 8601) for easier debugging and analysis.
+

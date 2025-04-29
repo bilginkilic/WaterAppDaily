@@ -17,25 +17,22 @@ const { width } = Dimensions.get('window');
 const slides = [
   {
     id: '1',
-    title: 'Su Ayak İzinizi Keşfedin',
-    description: 'Günlük su tüketiminizi analiz ederek çevresel etkinizi öğrenin.',
-    image: require('../assets/intro-1.png'),
-    icon: 'water',
+    title: 'Welcome to WaterSave',
+    description: 'Track your water usage and learn how to save water in your daily life.',
+    icon: 'water'
   },
   {
     id: '2',
-    title: 'Kişisel Öneriler Alın',
-    description: 'Size özel tasarruf önerileri ile su tüketiminizi azaltın.',
-    image: require('../assets/intro-2.png'),
-    icon: 'lightbulb-on',
+    title: 'Personalized Tasks',
+    description: 'Get customized water-saving tasks based on your usage patterns.',
+    icon: 'check-circle'
   },
   {
     id: '3',
-    title: 'İlerlemenizi Takip Edin',
-    description: 'Başarılarınızı görün ve su tasarrufunuzu ölçün.',
-    image: require('../assets/intro-3.png'),
-    icon: 'chart-line-variant',
-  },
+    title: 'Track Progress',
+    description: 'Monitor your water savings and achievements over time.',
+    icon: 'chart-line'
+  }
 ];
 
 export const IntroScreen = ({ navigation }) => {
@@ -62,18 +59,12 @@ export const IntroScreen = ({ navigation }) => {
       });
       setCurrentSlideIndex(currentSlideIndex + 1);
     } else {
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Survey' }]
-      });
+      navigation.replace('Survey');
     }
   };
 
   const handleSkip = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Survey' }]
-    });
+    navigation.replace('Survey');
   };
 
   const renderPaginationDots = () => {
@@ -119,7 +110,7 @@ export const IntroScreen = ({ navigation }) => {
           style={styles.skipButton}
           onPress={handleSkip}
         >
-          <Text style={styles.skipButtonText}>Atla</Text>
+          <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -127,7 +118,7 @@ export const IntroScreen = ({ navigation }) => {
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>
-            {currentSlideIndex === slides.length - 1 ? 'Başla' : 'İleri'}
+            {currentSlideIndex === slides.length - 1 ? 'Start' : 'Next'}
           </Text>
           <MaterialCommunityIcons 
             name={currentSlideIndex === slides.length - 1 ? 'check' : 'arrow-right'} 

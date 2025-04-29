@@ -1,0 +1,932 @@
+Water Footprint Mobile App Rule File
+
+This rule file outlines the scenarios, algorithms, and logic to be implemented in the Water Footprint Mobile App. It is designed to guide the coding process, ensuring the app calculates water footprints accurately, assigns tasks based on user responses, and integrates seamlessly with the provided API and question dataset.
+
+1. Overview
+
+The app helps users calculate and reduce their water footprint by answering questions, completing tasks, and tracking progress. It uses a predefined question dataset and integrates with the WaterApp API for authentication and data management. This document specifies the scenarios and algorithms to handle user interactions, water footprint calculations, and task assignments.
+
+2. Data Source
+
+The app uses the provided questions dataset, which includes:
+
+
+
+
+
+Structure:
+
+
+
+
+
+id: Unique question identifier
+
+
+
+category: Category ID (e.g., DISHWASHING, SHOWER, PLUMBING)
+
+
+
+text: Question text
+
+
+
+options: Array of options with:
+
+
+
+
+
+text: Option text
+
+
+
+valueSaving: Water saved (ml)
+
+
+
+valueTotal: Total water used (ml)
+
+
+
+task: Task or achievement message
+
+
+
+category: Associated category
+
+
+
+type: Achievement or Task
+
+
+
+trainingText: Educational text
+
+
+
+content: Additional info (message, image, video, additionalInfo)
+
+
+
+Example:
+
+{
+  "id": 1,
+  "category": "DISHWASHING",
+  "text": "Do you use a dishwasher to wash your dishes?",
+  "options": [
+    { "text": "Yes", "valueSaving": 111, "valueTotal": 15, "task": "Well done...", "type": "Achievement" },
+    { "text": "No", "valueSaving": 0, "valueTotal": 126, "task": "Pre-rinsing dishes...", "type": "Task" }
+  ],
+  "trainingText": "Hand washing dishes can use up to 5 times more water...",
+  "content": { "message": "Switch to a dishwasher...", "image": "dishwasher.jpg", ... }
+}
+
+3. API Integration
+
+The app integrates with the WaterApp API (Base URL: https://waterappdashboard2.onrender.com). Key endpoints:
+
+
+
+
+
+Authentication:
+
+
+
+
+
+POST /api/auth/register: Register user
+
+
+
+POST /api/auth/login: Log in user
+
+
+
+POST /api/auth/forgot-password: Request password reset
+
+
+
+POST /api/auth/reset-password: Reset password
+
+
+
+Water Footprint:
+
+
+
+
+
+POST /api/waterprint/initial-profile: Submit initial water footprint
+
+
+
+POST /api/waterprint/update: Update water footprint after task completion
+
+
+
+GET /api/waterprint/progress/:userId: Retrieve progress data
+
+
+
+Notes:
+
+
+
+
+
+Use Content-Type: application/json.
+
+
+
+Include Authorization: Bearer {token} for authenticated endpoints.
+
+
+
+Water quantities are in milliliters (ml).
+
+
+
+Dates use ISO 8601 format (e.g., 2025-04-28T12:00:00Z).
+
+4. Scenarios and Algorithms
+
+4.1. User Authentication
+
+Scenario: Users must register or log in to access the app's features.
+
+
+
+
+
+Algorithm:
+
+
+
+
+
+Registration:
+
+
+
+
+
+Collect email, password (min 6 characters), and name.
+
+
+
+Send POST /api/auth/register with payload:
+
+{ "email": "user@example.com", "password": "test123", "name": "User" }
+
+
+
+On success, store token and userId in AsyncStorage.
+
+
+
+On error (e.g., 400), display message (e.g., "Email already exists").
+
+
+
+Login:
+
+
+
+
+
+Collect email and password.
+
+
+
+Send POST /api/auth/login.
+
+
+
+Store token, userId, and name on success.
+
+
+
+Display error message on failure (e.g., "Invalid credentials").
+
+
+
+Password Reset:
+
+
+
+
+
+For forgot password, collect email and send POST /api/auth/forgot-password.
+
+
+
+For reset, collect token and newPassword, send POST /api/auth/reset-password.
+
+
+
+Display success or error messages.
+
+
+
+Token Management:
+
+
+
+
+
+Before each API call, check AsyncStorage for valid token.
+
+
+
+If token is expired (401 error), redirect to login screen.
+
+
+
+Edge Cases:
+
+
+
+
+
+Handle network failures with retry logic (max 3 retries, 2s delay).
+
+
+
+Cache user data locally for offline access.
+
+4.2. Initial Water Footprint Calculation
+
+Scenario: New users answer a series of questions to calculate their initial water footprint.
+
+
+
+
+
+Algorithm:
+
+
+
+
+
+Load questions from the dataset.
+
+
+
+Display questions sequentially in a wizard-like flow.
+
+
+
+
+
+Render text, options, and a "Next" button.
+
+
+
+Store user selection (option text).
+
+
+
+For each question:
+
+
+
+
+
+Identify selected option.
+
+
+
+Record:
+
+
+
+
+
+questionId: Question ID
+
+
+
+answer: Selected option text
+
+
+
+isCorrect: True if type is Achievement, false if Task
+
+
+
+Add valueTotal to cumulative water footprint.
+
+
+
+Add valueSaving to cumulative savings.
+
+
+
+Calculate:
+
+
+
+
+
+correctAnswersCount: Number of isCorrect: true responses.
+
+
+
+initialWaterprint: Sum of valueTotal for all selected options (in ml).
+
+
+
+Submit to API (POST /api/waterprint/initial-profile):
+
+{
+  "answers": [
+    { "questionId": "1", "answer": "Yes", "isCorrect": true },
+    ...
+  ],
+  "correctAnswersCount": 5,
+  "initialWaterprint": 123456
+}
+
+
+
+On success, store profileId and proceed to task screen.
+
+
+
+Display trainingText and content (message, image, video) after each answer.
+
+
+
+Edge Cases:
+
+
+
+
+
+If user skips a question, prompt to answer before proceeding.
+
+
+
+Cache responses locally to resume if app is closed.
+
+
+
+Handle API errors by retrying or saving data for later submission.
+
+4.3. Task Assignment and Completion
+
+Scenario: Users receive tasks or achievements based on their answers and can complete tasks to reduce their water footprint.
+
+
+
+
+
+Algorithm:
+
+
+
+
+
+For each question answered:
+
+
+
+
+
+Retrieve selected option’s task and type.
+
+
+
+If type is Achievement:
+
+
+
+
+
+Display congratulatory message (e.g., "Well done, you’ve saved 15 litres").
+
+
+
+Add to user’s achievement list.
+
+
+
+If type is Task:
+
+
+
+
+
+Add to user’s task list with:
+
+
+
+
+
+taskId: Generate unique ID (e.g., questionId-optionIndex).
+
+
+
+description: task text.
+
+
+
+potentialReduction: Difference between valueTotal and best option’s valueTotal.
+
+
+
+Display tasks in a list, allowing users to mark them as completed.
+
+
+
+On task completion:
+
+
+
+
+
+Calculate waterprintReduction (e.g., potentialReduction).
+
+
+
+Update local water footprint: currentWaterprint -= waterprintReduction.
+
+
+
+Send POST /api/waterprint/update:
+
+{
+  "currentWaterprint": 108456,
+  "taskId": "1-0",
+  "waterprintReduction": 15000
+}
+
+
+
+On success, update task status to completed.
+
+
+
+Display updated water footprint and savings.
+
+
+
+Edge Cases:
+
+
+
+
+
+Prevent duplicate task completion.
+
+
+
+Queue task updates for offline mode.
+
+
+
+Validate waterprintReduction to ensure it’s positive and realistic.
+
+4.4. Progress Tracking
+
+Scenario: Users view their water footprint progress and history.
+
+
+
+
+
+Algorithm:
+
+
+
+
+
+Fetch progress data via GET /api/waterprint/progress/:userId.
+
+
+
+Parse response:
+
+
+
+
+
+initialWaterprint: Initial footprint (ml).
+
+
+
+currentWaterprint: Current footprint (ml).
+
+
+
+waterprintReduction: Total reduction (ml).
+
+
+
+correctAnswersCount: Number of correct answers.
+
+
+
+completedTasks: List of completed tasks with taskId, waterprintReduction, completionDate.
+
+
+
+progressHistory: Array of { date, waterprint }.
+
+
+
+Display:
+
+
+
+
+
+Stats: Initial vs. current footprint, total reduction.
+
+
+
+Chart: Line graph of progressHistory (x-axis: date, y-axis: waterprint).
+
+
+
+Completed tasks: List with details.
+
+
+
+Refresh data on user request or app foreground.
+
+
+
+Edge Cases:
+
+
+
+
+
+Cache progress data for offline viewing.
+
+
+
+Handle missing or incomplete API data gracefully.
+
+
+
+Format dates for user locale (e.g., MM/DD/YYYY).
+
+4.5. Educational Content
+
+Scenario: Users receive educational content to learn about water conservation.
+
+
+
+
+
+Algorithm:
+
+
+
+
+
+After each question, display:
+
+
+
+
+
+trainingText: As a brief message.
+
+
+
+content.message: As a call-to-action.
+
+
+
+content.image: Load image (cache locally).
+
+
+
+content.video: Embed YouTube video or provide link.
+
+
+
+content.additionalInfo: Show in an expandable section.
+
+
+
+Preload images and cache videos for offline access.
+
+
+
+Allow users to revisit content from a "Learn" section.
+
+
+
+Edge Cases:
+
+
+
+
+
+Fallback to text if media fails to load.
+
+
+
+Optimize large images/videos for low-bandwidth devices.
+
+5. Key Algorithms
+
+5.1. Water Footprint Calculation
+
+function calculateInitialWaterprint(answers):
+  waterprint = 0
+  savings = 0
+  correctCount = 0
+  responseList = []
+
+  for each answer in answers:
+    question = questions.find(q => q.id === answer.questionId)
+    option = question.options.find(o => o.text === answer.optionText)
+    
+    waterprint += option.valueTotal
+    savings += option.valueSaving
+    isCorrect = option.type === "Achievement"
+    if isCorrect:
+      correctCount += 1
+    
+    responseList.push({
+      questionId: question.id,
+      answer: option.text,
+      isCorrect: isCorrect
+    })
+
+  return {
+    initialWaterprint: waterprint,
+    correctAnswersCount: correctCount,
+    answers: responseList
+  }
+
+5.2. Task Assignment
+
+function assignTasks(answers):
+  tasks = []
+  achievements = []
+
+  for each answer in answers:
+    question = questions.find(q => q.id === answer.questionId)
+    option = question.options.find(o => o.text === answer.optionText)
+    
+    if option.type === "Achievement":
+      achievements.push({
+        questionId: question.id,
+        message: option.task
+      })
+    else if option.type === "Task":
+      bestOption = question.options.min(o => o.valueTotal)
+      tasks.push({
+        taskId: `${question.id}-${option.index}`,
+        description: option.task,
+        potentialReduction: option.valueTotal - bestOption.valueTotal
+      })
+
+  return { tasks, achievements }
+
+5.3. Water Footprint Update
+
+function updateWaterprint(taskId, currentWaterprint):
+  task = tasks.find(t => t.taskId === taskId)
+  if task.completed:
+    return error("Task already completed")
+  
+  waterprintReduction = task.potentialReduction
+  newWaterprint = currentWaterprint - waterprintReduction
+  
+  apiResponse = POST("/api/waterprint/update", {
+    currentWaterprint: newWaterprint,
+    taskId: taskId,
+    waterprintReduction: waterprintReduction
+  })
+  
+  if apiResponse.success:
+    task.completed = true
+    return { newWaterprint, waterprintReduction }
+  else:
+    queueForRetry()
+    return error("Failed to update")
+
+6. Error Handling
+
+
+
+
+
+API Errors:
+
+
+
+
+
+400: Display "Invalid input, please check your data."
+
+
+
+401: Redirect to login screen.
+
+
+
+403: Display "You don’t have permission to perform this action."
+
+
+
+500: Display "Server error, please try again later."
+
+
+
+Network Errors:
+
+
+
+
+
+Retry up to 3 times with exponential backoff (1s, 2s, 4s).
+
+
+
+Queue requests for offline mode.
+
+
+
+Data Validation:
+
+
+
+
+
+Ensure valueTotal and valueSaving are non-negative.
+
+
+
+Validate question and option IDs against dataset.
+
+7. Offline Support
+
+
+
+
+
+Cache questions, user responses, and content in AsyncStorage.
+
+
+
+Queue API requests (e.g., profile submission, task updates) in a local queue.
+
+
+
+Sync queued requests when connectivity is restored.
+
+
+
+Display cached progress and content in offline mode.
+
+8. Performance Optimizations
+
+
+
+
+
+Data Loading:
+
+
+
+
+
+Load questions lazily to reduce memory usage.
+
+
+
+Cache API responses with a TTL (e.g., 1 hour for progress data).
+
+
+
+Media:
+
+
+
+
+
+Compress images before caching.
+
+
+
+Stream videos only when requested.
+
+
+
+Rendering:
+
+
+
+
+
+Use FlatList for task and progress lists to optimize scrolling.
+
+
+
+Memoize components to prevent unnecessary re-renders.
+
+9. Testing Scenarios
+
+
+
+
+
+Authentication:
+
+
+
+
+
+Test successful and failed login/register with test accounts (e.g., user4@example.com).
+
+
+
+Verify token persistence across app restarts.
+
+
+
+Water Footprint:
+
+
+
+
+
+Test footprint calculation with all questions answered.
+
+
+
+Validate API submission with mock responses.
+
+
+
+Tasks:
+
+
+
+
+
+Test task assignment for all question options.
+
+
+
+Verify task completion updates footprint correctly.
+
+
+
+Progress:
+
+
+
+
+
+Test progress display with sample API data.
+
+
+
+Validate chart rendering with varying history lengths.
+
+
+
+Offline Mode:
+
+
+
+
+
+Test question answering and content display without internet.
+
+
+
+Verify queued requests sync correctly.
+
+10. Notes
+
+
+
+
+
+Use milliliters (ml) for all water calculations to match API.
+
+
+
+Ensure UI updates reflect API responses to maintain consistency.
+
+
+
+Log errors to a local file for debugging (exclude sensitive data).
+
+
+
+Support internationalization for future localization (e.g., store strings in a separate file).

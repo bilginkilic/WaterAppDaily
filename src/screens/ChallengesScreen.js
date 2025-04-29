@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   Clipboard,
 } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { categories, categoryIds } from '../data/categories';
 import questions from '../data/questions';
 import strings from '../localization/strings';
@@ -28,8 +27,7 @@ import { NotificationService } from '../services';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getTutorialVideo, getYoutubeVideoId, getYoutubeEmbedUrl } from '../services/TutorialService';
 import { ProfileScreen } from './ProfileScreen';
-
-const Tab = createBottomTabNavigator();
+import DataService from '../services/DataService';
 
 const { width } = Dimensions.get('window');
 
@@ -97,92 +95,20 @@ const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
   );
 };
 
-const ChallengesContent = ({ route, navigation }) => {
-  const { improvementAreas = [], waterProfile = null } = route.params || {};
-  const [tasks, setTasks] = useState([]);
+const ChallengesContent = ({ tasks, onTasksUpdate }) => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [videoUrl, setVideoUrl] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
-  const [achievements, setAchievements] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const loadData = async () => {
-    try {
-      console.log('Loading tasks...');
-      console.log('Improvement Areas:', improvementAreas);
-
-      // Ensure water profile exists
-      await StorageService.ensureWaterProfile();
-
-      // First, validate and update all tasks
-      await StorageService.validateAndUpdateTasks();
-      
-      // Then get the validated tasks
-      const savedTasks = await StorageService.getTasks();
-      console.log('Saved Tasks:', savedTasks);
-
-      if (!savedTasks || !Array.isArray(savedTasks)) {
-        console.warn('No saved tasks found or invalid format');
-        setTasks([]);
-        setLoading(false);
-        return;
-      }
-
-      // Filter tasks based on improvement areas and completion status
-      let activeTasks;
-      if (improvementAreas && improvementAreas.length > 0) {
-        console.log('Filtering tasks by improvement areas:', improvementAreas);
-        activeTasks = savedTasks.filter(task => 
-          improvementAreas.includes(task.category) && !task.completed
-        );
-        console.log('Filtered tasks:', activeTasks);
-      } else {
-        console.log('No improvement areas specified, showing all uncompleted tasks');
-        activeTasks = savedTasks.filter(task => !task.completed);
-      }
-
-      setTasks(activeTasks);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setLoading(false);
-      Alert.alert('Error', 'Failed to load tasks. Please try again.');
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [improvementAreas]);
-
-  const handleTaskPress = async (task) => {
-    console.log('Task pressed:', task);
-    if (!task) {
-      console.warn('No task data provided to handleTaskPress');
-      return;
-    }
-
-    try {
-      // Get the original question from questions array
-      const originalQuestion = questions.find(q => q.id === task.id);
-      if (!originalQuestion) {
-        console.warn('Original question not found');
-        return;
-      }
-
-      console.log('Original question:', originalQuestion);
-
+  const handleTaskPress = (task) => {
+    const question = questions.find(q => q.id === task.questionId);
+    if (question) {
       setCurrentQuestion({
-        id: task.id,
-        content: originalQuestion.text,
-        options: originalQuestion.options,
-        task: task,
-        additionalInfo: originalQuestion.additionalInfo || originalQuestion.content?.additionalInfo
+        ...question,
+        task
       });
-      setShowQuestionModal(true);
-    } catch (error) {
-      console.error('Error in handleTaskPress:', error);
-      Alert.alert('Error', 'Failed to load question details.');
     }
   };
 
@@ -270,120 +196,30 @@ const ChallengesContent = ({ route, navigation }) => {
   const handleModalResponse = async (selectedOption) => {
     if (!currentQuestion?.task) return;
 
+    setIsLoading(true);
+
     try {
-      console.log('Selected option:', selectedOption);
-      const task = currentQuestion.task;
+      // Save the new answer
+      await DataService.saveSurveyAnswer(currentQuestion.task.questionId, selectedOption);
 
-      // If the selected option is of type Achievement
-      if (selectedOption.type === 'Achievement') {
-        console.log('Converting task to achievement...');
+      // Get updated data
+      const updatedTasks = await DataService.getTasks();
+      const updatedAchievements = await DataService.getAchievements();
+      const waterFootprint = await DataService.getWaterFootprint();
 
-        // Create new achievement
-        const newAchievement = {
-          id: task.id,
-          category: task.category,
-          type: 'Achievement',
-          date: new Date().toISOString(),
-          improvement: selectedOption.valueSaving,
-          message: selectedOption.task,
-          waterUsage: selectedOption.valueTotal
-        };
+      // Update parent component
+      onTasksUpdate({
+        tasks: updatedTasks,
+        achievements: updatedAchievements,
+        waterFootprint
+      });
 
-        // Add to achievements
-        const currentAchievements = await StorageService.getAchievements();
-        const updatedAchievements = [...(currentAchievements || []), newAchievement];
-        await StorageService.saveAchievements(updatedAchievements);
-
-        // Update local state for achievements
-        setAchievements(updatedAchievements);
-
-        // Mark task as completed
-        const updatedTask = { ...task, completed: true };
-        await StorageService.updateTaskProgress(updatedTask);
-
-        // Update tasks state to reflect completion
-        setTasks(prevTasks => prevTasks.map(t => 
-          t.id === task.id ? { ...t, completed: true } : t
-        ));
-
-        // Update water footprint
-        const progress = await StorageService.ensureWaterProfile();
-        
-        // Get updated total water footprint by summing valueTotal from all current answers
-        const answers = await StorageService.getAnswers();
-        // Find the answer that corresponds to this task and replace it
-        const updatedAnswers = answers.map(answer => 
-          answer.questionId === task.id ? 
-          {...answer, answer: selectedOption.text, waterprintValue: selectedOption.valueTotal} : 
-          answer
-        );
-        await StorageService.saveAnswers(updatedAnswers);
-        
-        // Calculate new water footprint based on all current answers
-        const newWaterprint = updatedAnswers.reduce((total, answer) => 
-          total + (answer.waterprintValue || 0), 0);
-        
-        // Ensure all required fields exist in progress object
-        const updatedProgress = {
-          initialWaterprint: progress?.initialWaterprint || newWaterprint,
-          currentWaterprint: newWaterprint,
-          waterprintReduction: (progress?.initialWaterprint || newWaterprint) - newWaterprint,
-          completedTasks: [...(progress?.completedTasks || []), task.id],
-          progressHistory: [
-            ...(progress?.progressHistory || []),
-            {
-              date: new Date(),
-              waterprint: newWaterprint
-            }
-          ]
-        };
-
-        await StorageService.saveProgress(updatedProgress);
-
-        // Update API
-        try {
-          const token = await StorageService.getToken();
-          const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/update', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token || ''}`
-            },
-            body: JSON.stringify({
-              currentWaterprint: newWaterprint,
-              taskId: task.id,
-              waterprintReduction: selectedOption.valueSaving
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error('API update failed');
-          }
-
-          console.log('API updated successfully');
-        } catch (error) {
-          console.error('API update error:', error);
-          // Continue with local updates even if API fails
-        }
-
-        // Show success message
-        Alert.alert(
-          'Achievement Unlocked!',
-          'Congratulations! You\'ve earned a new achievement and reduced your water footprint.',
-          [{ text: 'OK' }]
-        );
-
-        // Reload tasks
-        loadData();
-      } else {
-        // If not achievement type, just close the modal
-        setShowQuestionModal(false);
-      }
+      // Close modal
+      setCurrentQuestion(null);
     } catch (error) {
-      console.error('Error in handleModalResponse:', error);
-      Alert.alert('Error', 'Failed to update your progress.');
+      console.error('Error handling task response:', error);
     } finally {
-      setShowQuestionModal(false);
+      setIsLoading(false);
     }
   };
 
@@ -410,24 +246,24 @@ const ChallengesContent = ({ route, navigation }) => {
             </View>
             
             <ScrollView style={styles.modalScrollContainer}>
-              <Text style={styles.modalQuestion}>{currentQuestion.content}</Text>
+              <Text style={styles.modalQuestion}>{currentQuestion.text}</Text>
               
               {/* Video tutorial button */}
               <TouchableOpacity 
                 style={styles.watchVideoButton}
-                onPress={() => handleWatchVideo(currentQuestion.task.category)}
+                onPress={() => handleWatchVideo(currentQuestion.category)}
               >
                 <MaterialIcons name="ondemand-video" size={20} color="#FFFFFF" />
                 <Text style={styles.watchVideoText}>{strings.watchTutorial}</Text>
               </TouchableOpacity>
               
-              {currentQuestion.additionalInfo && (
-                <Text style={styles.additionalInfo}>{currentQuestion.additionalInfo}</Text>
+              {currentQuestion.trainingText && (
+                <Text style={styles.trainingText}>{currentQuestion.trainingText}</Text>
               )}
               
               <View style={styles.optionsContainer}>
                 <Text style={styles.optionsTitle}>Select your answer:</Text>
-                {currentQuestion.options && currentQuestion.options.map((option, index) => (
+                {currentQuestion.options.map((option, index) => (
                   <TouchableOpacity
                     key={index}
                     style={[
@@ -566,76 +402,49 @@ const ChallengesContent = ({ route, navigation }) => {
     return description;
   };
 
-   
- 
-
-  // Add test button to header
-  useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={testApp}
-          style={{ marginRight: 16 }}
-        >
-          <MaterialCommunityIcons name="refresh" size={24} color="#2196F3" />
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
-    );
-  }
-
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.challengeHeader}>
-          <Text style={styles.challengeTitle}>Your Water-Saving Journey</Text>
-          <Text style={styles.challengeSubtitle}>
-            Complete these challenges to reduce your water footprint. Watch the educational videos and make sustainable choices to earn achievements.
+    <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.challengeHeader}>
+        <Text style={styles.challengeTitle}>Water-Saving</Text>
+        <Text style={styles.challengeSubtitle}>
+          Complete these challenges to reduce your water footprint. Watch the educational videos and make sustainable choices to earn achievements.
+        </Text>
+      </View>
+
+      {/* Show Active Tasks */}
+      {tasks.length > 0 ? (
+        <View style={styles.section}>
+          {tasks.map((task, index) => (
+            <TouchableOpacity 
+              key={index} 
+              style={[
+                styles.taskCard,
+                task.completed && styles.completedTask
+              ]}
+              onPress={() => handleTaskPress(task)}
+            >
+              <View style={styles.taskContent}>
+                <Text style={styles.taskEmoji}>{getTaskEmoji(task.category)}</Text>
+                <View style={styles.taskTextContainer}>
+                  <Text style={styles.taskDescription}>
+                    {getTaskDescription(task)}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            Congratulations! You have completed all challenges.
           </Text>
         </View>
+      )}
 
-        {/* Show Active Tasks */}
-        {tasks.length > 0 ? (
-          <View style={styles.section}>
-            {tasks.map((task, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={[
-                  styles.taskCard,
-                  task.completed && styles.completedTask
-                ]}
-                onPress={() => handleTaskPress(task)}
-              >
-                <View style={styles.taskContent}>
-                  <Text style={styles.taskEmoji}>{getTaskEmoji(task.category)}</Text>
-                  <View style={styles.taskTextContainer}>
-                    <Text style={styles.taskDescription}>
-                      {getTaskDescription(task)}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              Complete the water usage survey to receive personalized challenges and start your water-saving journey.
-            </Text>
-          </View>
-        )}
-
-        {renderQuestionModal()}
-        {renderVideoModal()}
-      </ScrollView>
-    </SafeAreaView>
+      {renderQuestionModal()}
+      {renderVideoModal()}
+    </ScrollView>
   );
 };
 
@@ -732,68 +541,124 @@ const AchievementsScreen = ({ achievements }) => {
   );
 };
 
+const SegmentControl = ({ selectedSegment, onSegmentChange }) => {
+  return (
+    <View style={styles.segmentContainer}>
+      <TouchableOpacity
+        style={[styles.segmentButton, selectedSegment === 'challenges' && styles.selectedSegment]}
+        onPress={() => onSegmentChange('challenges')}
+      >
+        <MaterialCommunityIcons 
+          name="flag-checkered" 
+          size={24} 
+          color={selectedSegment === 'challenges' ? '#2196F3' : '#666'} 
+        />
+        <Text style={[styles.segmentText, selectedSegment === 'challenges' && styles.selectedSegmentText]}>
+          Challenges
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.segmentButton, selectedSegment === 'achievements' && styles.selectedSegment]}
+        onPress={() => onSegmentChange('achievements')}
+      >
+        <MaterialCommunityIcons 
+          name="trophy" 
+          size={24} 
+          color={selectedSegment === 'achievements' ? '#2196F3' : '#666'} 
+        />
+        <Text style={[styles.segmentText, selectedSegment === 'achievements' && styles.selectedSegmentText]}>
+          Achievements
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.segmentButton, selectedSegment === 'profile' && styles.selectedSegment]}
+        onPress={() => onSegmentChange('profile')}
+      >
+        <MaterialCommunityIcons 
+          name="account" 
+          size={24} 
+          color={selectedSegment === 'profile' ? '#2196F3' : '#666'} 
+        />
+        <Text style={[styles.segmentText, selectedSegment === 'profile' && styles.selectedSegmentText]}>
+          Profile
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 export const ChallengesScreen = ({ route, navigation }) => {
+  const [selectedSegment, setSelectedSegment] = useState('challenges');
+  const [tasks, setTasks] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [waterFootprint, setWaterFootprint] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const savedAchievements = await StorageService.getAchievements();
-        setAchievements(savedAchievements || []);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading achievements:', error);
-        setLoading(false);
-      }
-    };
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [tasksData, achievementsData, footprint] = await Promise.all([
+        DataService.getTasks(),
+        DataService.getAchievements(),
+        DataService.getWaterFootprint()
+      ]);
 
+      setTasks(tasksData);
+      setAchievements(achievementsData);
+      setWaterFootprint(footprint);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setLoading(false);
+      Alert.alert('Error', 'Failed to load data');
+    }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
-      </View>
-    );
-  }
+  const handleTasksUpdate = (newData) => {
+    setTasks(newData.tasks);
+    setAchievements(newData.achievements);
+    setWaterFootprint(newData.waterFootprint);
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+        </View>
+      );
+    }
+
+    switch (selectedSegment) {
+      case 'challenges':
+        return (
+          <ChallengesContent 
+            tasks={tasks.filter(task => !task.completed)} 
+            onTasksUpdate={handleTasksUpdate} 
+          />
+        );
+      case 'achievements':
+        return <AchievementsScreen achievements={achievements} />;
+      case 'profile':
+        return <ProfileScreen waterProfile={waterFootprint} />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
-
-          if (route.name === 'Challenges') {
-            iconName = focused ? 'flag' : 'flag-outline';
-          } else if (route.name === 'Achievements') {
-            iconName = focused ? 'trophy' : 'trophy-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'account' : 'account-outline';
-          }
-
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#2196F3',
-        tabBarInactiveTintColor: 'gray',
-      })}
-    >
-      <Tab.Screen 
-        name="Challenges" 
-        component={ChallengesContent}
-        initialParams={route.params}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <SegmentControl
+        selectedSegment={selectedSegment}
+        onSegmentChange={setSelectedSegment}
       />
-      <Tab.Screen 
-        name="Achievements" 
-        children={() => <AchievementsScreen achievements={achievements} />}
-      />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
-      />
-    </Tab.Navigator>
+      {renderContent()}
+    </SafeAreaView>
   );
 };
 
@@ -982,16 +847,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  additionalInfo: {
+  trainingText: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
+    marginBottom: 20,
+    fontStyle: 'italic',
   },
   optionsContainer: {
     marginVertical: 16,
@@ -1123,5 +983,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  segmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  selectedSegment: {
+    backgroundColor: '#E3F2FD',
+  },
+  segmentText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  selectedSegmentText: {
+    color: '#2196F3',
+    fontWeight: '600',
   },
 }); 

@@ -6,15 +6,19 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import StorageService from '../services/StorageService';
 import strings from '../localization/strings';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { categories } from '../data/categories';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const AchievementsScreen = ({ navigation }) => {
   const [achievements, setAchievements] = useState([]);
   const [totalSaved, setTotalSaved] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadAchievements();
@@ -28,38 +32,49 @@ export const AchievementsScreen = ({ navigation }) => {
     return () => unsubscribe();
   }, [navigation]);
 
-  const loadAchievements = async () => {
-    const savedAchievements = await StorageService.getAchievements();
-    console.log('Loaded achievements:', savedAchievements);
-    if (savedAchievements) {
-      // Sort by date - newest to oldest
-      const sortedAchievements = savedAchievements.sort((a, b) => 
-        new Date(b.date || Date.now()) - new Date(a.date || Date.now())
-      );
-      setAchievements(sortedAchievements);
+  // Load achievements when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      loadAchievements();
+      return () => {
+        // Cleanup if needed
+      };
+    }, [])
+  );
 
-      // Calculate total savings
-      const total = sortedAchievements.reduce((acc, achievement) => 
-        acc + (achievement.improvement || 0), 0);
-      setTotalSaved(total);
+  const loadAchievements = async () => {
+    try {
+      setIsLoading(true);
+      const savedAchievements = await StorageService.getAchievements();
+      console.log('Loaded achievements:', savedAchievements);
+      if (savedAchievements) {
+        // Sort by date - newest to oldest
+        const sortedAchievements = savedAchievements.sort((a, b) => 
+          new Date(b.date || Date.now()) - new Date(a.date || Date.now())
+        );
+        setAchievements(sortedAchievements);
+
+        // Calculate total savings
+        const total = sortedAchievements.reduce((acc, achievement) => 
+          acc + (achievement.improvement || 0), 0);
+        setTotalSaved(total);
+      }
+    } catch (error) {
+      console.error('Error loading achievements:', error);
+      Alert.alert('Error', 'Failed to load achievements');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const getAchievementIcon = (category) => {
-    switch (category) {
-      case 'dishwashing': return 'dishwasher';
-      case 'shower': return 'shower';
-      case 'laundry': return 'washing-machine';
-      case 'plumbing': return 'water-pump';
-      case 'daily': return 'calendar-check';
-      case 'car': return 'car-wash';
-      default: return 'water';
-    }
+    const categoryObj = Object.values(categories).find(c => c.id === category);
+    return categoryObj?.icon || 'trophy';
   };
 
   const getCategoryColor = (categoryId) => {
-    const category = Object.values(categories).find(c => c.id === categoryId);
-    return category?.color || '#2196F3';
+    const categoryObj = Object.values(categories).find(c => c.id === categoryId);
+    return categoryObj?.color || '#2196F3';
   };
 
   const getAchievementTitle = (category) => {
@@ -95,6 +110,45 @@ export const AchievementsScreen = ({ navigation }) => {
     }
     return achievement.message;
   };
+
+  const renderAchievement = ({ item }) => (
+    <View style={styles.achievementCard}>
+      <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(item.category) }]}>
+        <MaterialCommunityIcons
+          name={getAchievementIcon(item.category)}
+          size={24}
+          color="#FFF"
+        />
+      </View>
+      <View style={styles.achievementContent}>
+        <View style={styles.achievementHeader}>
+          <Text style={styles.achievementTitle}>
+            {getAchievementTitle(item.category)}
+          </Text>
+          <Text style={styles.achievementDate}>
+            {new Date(item.date || Date.now()).toLocaleDateString()}
+          </Text>
+        </View>
+        <Text style={styles.achievementMessage}>
+          {getAchievementDescription(item)}
+        </Text>
+        <View style={styles.savingContainer}>
+          <MaterialCommunityIcons name="water" size={16} color="#2196F3" />
+          <Text style={styles.savingText}>
+            {strings.formatString(strings.savedWater, item.improvement || 0)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -139,39 +193,12 @@ export const AchievementsScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          achievements.map((achievement, index) => (
-            <View key={index} style={styles.achievementCard}>
-              <View style={[
-                styles.iconContainer, 
-                { backgroundColor: getCategoryColor(achievement.category) }
-              ]}>
-                <MaterialCommunityIcons 
-                  name={getAchievementIcon(achievement.category)} 
-                  size={24} 
-                  color="#FFF" 
-                />
-              </View>
-              <View style={styles.achievementContent}>
-                <View style={styles.achievementHeader}>
-                  <Text style={styles.achievementTitle}>
-                    {getAchievementTitle(achievement.category)}
-                  </Text>
-                  <Text style={styles.achievementDate}>
-                    {new Date(achievement.date || Date.now()).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text style={styles.achievementMessage}>
-                  {getAchievementDescription(achievement)}
-                </Text>
-                <View style={styles.savingContainer}>
-                  <MaterialCommunityIcons name="water" size={16} color="#2196F3" />
-                  <Text style={styles.savingText}>
-                    {strings.formatString(strings.savedWater, achievement.improvement || 0)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ))
+          <FlatList
+            data={achievements}
+            renderItem={renderAchievement}
+            keyExtractor={(item, index) => `${item.id || index}`}
+            contentContainerStyle={styles.listContainer}
+          />
         )}
       </View>
       
@@ -363,5 +390,14 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 12,
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+  },
+  listContainer: {
+    padding: 16,
   },
 }); 

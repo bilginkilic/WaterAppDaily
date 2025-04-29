@@ -5,7 +5,6 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { SurveyScreen } from './src/screens/SurveyScreen';
 import { SurveyResultsScreen } from './src/screens/SurveyResultsScreen';
 import { ChallengesScreen } from './src/screens/ChallengesScreen';
-import { TabNavigator } from './src/navigation/TabNavigator';
 import NotificationService from './src/services/NotificationService';
 import { IntroScreen } from './src/screens/IntroScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +14,7 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 const Stack = createNativeStackNavigator();
 
 function AppContent() {
-  const { isLoading, userToken } = useAuth();
+  const { isLoading, token } = useAuth();
 
   useEffect(() => {
     const initialize = async () => {
@@ -58,23 +57,21 @@ function AppContent() {
         screenOptions={{
           headerShown: false
         }}
-        initialRouteName={userToken ? "Main" : "Login"}
       >
-        {!userToken ? (
-          // Auth screens
+        {!token ? (
+          // Unauthenticated user flow
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Intro" component={IntroScreen} />
             <Stack.Screen name="Survey" component={SurveyScreen} />
             <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
-            <Stack.Screen name="Main" component={TabNavigator} />
-            <Stack.Screen name="Challenges" component={ChallengesScreen} />
           </>
         ) : (
-          // App screens
+          // Authenticated user flow
           <>
-            <Stack.Screen name="Main" component={TabNavigator} />
             <Stack.Screen name="Challenges" component={ChallengesScreen} />
+            <Stack.Screen name="Survey" component={SurveyScreen} />
+            <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
           </>
         )}
       </Stack.Navigator>

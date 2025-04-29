@@ -49,3 +49,6 @@ challenges kısmındaki taska bastıgında soruyu tekrar sormalı eğer cevap ti
   - challenge achivimenta dönünce, achivmenets listesi de güncellenmelidir.
   - profile kısmındaki water footprint gelişme kaydettikçe güncellenmelidir. yani başlangıcta tespit edilen bir su ayak izi var ve achivement oldukca bu su ayak izi azaldığı burada da gösterilmelidir.
   - bir survey doldurulmuşsa bu kaydedilmeli ve bir daha programa girdiğinde, kaldığı yerden devam etmelidir.
+
+
+  -login olunca intro cıkar sonra survey ve sonra tasklar kısmı gelir.

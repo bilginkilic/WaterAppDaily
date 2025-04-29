@@ -14,6 +14,7 @@ import { categories } from '../data/categories';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import StorageService from '../services/StorageService';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ const formatWaterVolume = (liters) => {
 };
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
+  const { signIn } = useAuth();
   const { results } = route.params;
   const waterFootprint = results?.totalWaterFootprint || 0;
   const tasks = results?.tasks || [];
@@ -36,6 +38,23 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     console.log(`Task ${task.id}: waterUsage = ${waterUsage}`);
     return total + waterUsage;
   }, 0);
+
+  // Get improvement areas from tasks and achievements
+  const allItems = [...tasks, ...achievements];
+  const improvementAreas = allItems.reduce((areas, item) => {
+    if (item.category && !areas.includes(item.category)) {
+      areas.push(item.category);
+    }
+    return areas;
+  }, []);
+
+  // Create water profile object
+  const waterProfile = {
+    initialWaterprint: waterFootprint,
+    dailyUsage: waterFootprint,
+    tasks: tasks,
+    achievements: achievements
+  };
   
   // Debug logs
   console.log('Survey Results:', JSON.stringify(results, null, 2));
@@ -43,112 +62,127 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   console.log('Achievements:', achievements);
   console.log('Water Footprint:', waterFootprint);
   console.log('Potential Saving:', potentialSaving);
-  console.log('Improvement Areas:', results.improvementAreas);
-  console.log('Available Categories:', Object.keys(categories));
-  
-  // Validate improvement areas
-  const validImprovementAreas = results.improvementAreas.filter(id => categories[id]);
-  if (validImprovementAreas.length !== results.improvementAreas.length) {
-    console.warn('Some improvement areas are invalid:', 
-      results.improvementAreas.filter(id => !categories[id]));
-  }
+  console.log('Improvement Areas:', improvementAreas);
   
   const handleStartChallenge = async () => {
     try {
-      // Clear all local storage first
-      await StorageService.clearStorage();
+      // Calculate initial water footprint from answers
+      const answers = results?.answers || [];
+      const initialWaterFootprint = answers.reduce((total, answer) => {
+        return total + (answer.waterprintValue || 0);
+      }, 0);
 
-      // Calculate total water usage and potential savings
-      const totalWaterUsage = results.tasks.reduce((sum, task) => sum + task.waterUsage, 0);
-
-      // Get improvement areas from both tasks and achievements
-      const allItems = [...results.tasks, ...results.achievements];
-      const improvementAreas = allItems.reduce((areas, item) => {
-        if (item.category && !areas.includes(item.category)) {
-          areas.push(item.category);
-        }
-        return areas;
-      }, []);
-
-      console.log('\n=== CREATING INITIAL PROFILE ===');
-      console.log('Initial water footprint:', waterFootprint);
-      console.log('Tasks:', results.tasks);
-      console.log('Achievements:', results.achievements);
-      console.log('Monthly potential saving:', totalWaterUsage);
-      console.log('Improvement Areas:', improvementAreas);
-
-      // Save initial data to local storage
-      await StorageService.saveTasks(results.tasks);
-      await StorageService.saveAchievements(results.achievements);
-      await StorageService.saveWaterProfile({
-        initialWaterprint: waterFootprint,
-        dailyUsage: waterFootprint,
-        lastUpdated: new Date().toISOString()
-      });
-
-      // Create initial profile data
-      const profileData = {
-        answers: results.answers,
-        correctAnswersCount: results.correctAnswersCount,
-        initialWaterprint: waterFootprint,
-        dailyUsage: waterFootprint,
+      // Create water profile object with calculated values
+      const waterProfileData = {
+        initialWaterprint: initialWaterFootprint,
+        dailyUsage: initialWaterFootprint,
+        lastUpdated: new Date().toISOString(),
         tasks: results.tasks,
-        achievements: results.achievements,
-        categories: improvementAreas,
-        potentialSaving: totalWaterUsage,
-        challengeStartDate: new Date().toISOString()
+        achievements: results.achievements
       };
 
-      // Get user token
-      const userToken = await AsyncStorage.getItem('userToken');
-      if (!userToken) {
-        throw new Error('User token not found');
+      console.log('Saving water profile:', waterProfileData);
+
+      // Save all data
+      const saveResults = await Promise.all([
+        StorageService.saveTasks(results.tasks),
+        StorageService.saveAchievements(results.achievements),
+        StorageService.saveWaterProfile(waterProfileData),
+        StorageService.saveAnswers(answers)
+      ]);
+
+      // Check if any save operation failed
+      if (saveResults.includes(false)) {
+        console.warn('Some data could not be saved to API but continued with local storage');
       }
 
-      // Send to API with proper error handling
-      const response = await fetch('https://waterappdashboard2.onrender.com/api/waterprint/initial-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`,
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API Error:', errorData);
-        throw new Error(errorData.message || 'Failed to create water footprint');
+      // Get user email from storage
+      const userEmail = await AsyncStorage.getItem('savedEmail');
+      if (userEmail) {
+        // Mark survey as completed for this email
+        await AsyncStorage.setItem(`survey_completed_${userEmail}`, 'true');
+        
+        // Sign in the user
+        await signIn({ email: userEmail });
       }
-
-      const responseData = await response.json();
-      console.log('API Response:', responseData);
 
       // Navigate to challenges screen
-      navigation.reset({
-        index: 0,
-        routes: [
-          { 
-            name: 'Challenges',
-            params: {
-              improvementAreas: improvementAreas,
-              waterProfile: {
-                initialWaterprint: waterFootprint,
-                dailyUsage: waterFootprint,
-                potentialSaving: totalWaterUsage
-              }
-            }
-          }
-        ],
+      console.log('Starting challenges with params:', { 
+        improvementAreas: [], 
+        waterProfile: waterProfileData 
       });
-
+      
+      navigation.replace('Challenges', {
+        improvementAreas: [],
+        waterProfile: waterProfileData
+      });
     } catch (error) {
-      console.error('Error creating water footprint:', error);
+      console.error('Error starting challenge:', error);
       Alert.alert(
-        'Error',
-        'Failed to start the challenge. Please try again. ' + error.message
+        'Warning',
+        'Some data could not be saved to the server, but you can continue using the app. Your data will be synchronized when the connection is restored.'
       );
+      
+      // Try to navigate anyway after signing in
+      try {
+        const userEmail = await AsyncStorage.getItem('savedEmail');
+        if (userEmail) {
+          await signIn({ email: userEmail });
+        }
+        
+        navigation.replace('Challenges', {
+          improvementAreas: [],
+          waterProfile: {
+            initialWaterprint: 0,
+            dailyUsage: 0,
+            lastUpdated: new Date().toISOString(),
+            tasks: results.tasks,
+            achievements: results.achievements
+          }
+        });
+      } catch (signInError) {
+        console.error('Error signing in:', signInError);
+        Alert.alert('Error', 'Could not start the challenge. Please try again.');
+      }
     }
+  };
+
+  const renderResults = () => {
+    const { totalWaterFootprint, tasks, achievements, potentialMonthlySaving } = route.params.results;
+
+    return (
+      <View style={styles.resultsContainer}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Your Water Footprint</Text>
+          <Text style={styles.waterFootprintValue}>{totalWaterFootprint} L</Text>
+          <Text style={styles.summarySubtitle}>per day</Text>
+        </View>
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryTitle}>Potential Monthly Savings</Text>
+          <Text style={styles.savingsValue}>{potentialMonthlySaving} L</Text>
+          <Text style={styles.summarySubtitle}>if you complete all tasks</Text>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{tasks.length}</Text>
+            <Text style={styles.statLabel}>Tasks</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{achievements.length}</Text>
+            <Text style={styles.statLabel}>Achievements</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.startButton}
+          onPress={handleStartChallenge}
+        >
+          <Text style={styles.startButtonText}>Start Your Water Saving Journey</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
@@ -161,25 +195,14 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           <Text style={styles.title}>{strings.surveyComplete}</Text>
         </View>
 
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Your Monthly Water Usage Water Footprint</Text>
-          <Text style={styles.amount}>{waterFootprint.toFixed(1)}L</Text>
-          
-          <View style={styles.savingContainer}>
-            <Text style={styles.savingTitle}>Potential Monthly Saving</Text>
-            <Text style={styles.savingAmount}>
-              {potentialSaving.toFixed(1)}L
-            </Text>
-            <Text style={styles.savingNote}>Based on your tasks and improvements</Text>
-          </View>
-        </View>
+        {renderResults()}
 
         <View style={styles.areasContainer}>
           <Text style={styles.sectionTitle}>{strings.improvementAreasTitle}</Text>
           <Text style={styles.explanationText}>
             {strings.improvementAreasDesc}
           </Text>
-          {results.improvementAreas.map((categoryId) => {
+          {improvementAreas.map((categoryId) => {
             const category = categories[categoryId];
             if (!category) return null;
 
@@ -218,14 +241,6 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
             {strings.challengeInfo}
           </Text>
         </View>
-
-        <TouchableOpacity 
-          style={styles.startButton}
-          onPress={handleStartChallenge}
-        >
-          <MaterialCommunityIcons name="flag-checkered" size={24} color="#FFF" style={styles.buttonIcon} />
-          <Text style={styles.startButtonText}>{strings.startChallengeButton}</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -253,6 +268,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
+  resultsContainer: {
+    marginBottom: 32,
+  },
   summaryCard: {
     backgroundColor: '#FFFFFF',
     padding: 24,
@@ -271,31 +289,50 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
-  amount: {
+  waterFootprintValue: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
   },
-  savingContainer: {
-    marginTop: 16,
-    alignItems: 'center',
+  summarySubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
   },
-  savingTitle: {
-    fontSize: 18,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  savingAmount: {
+  savingsValue: {
     fontSize: 48,
     fontWeight: 'bold',
     color: '#4CAF50',
   },
-  savingNote: {
-    fontSize: 16,
-    color: '#4CAF50',
-    marginBottom: 16,
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  startButton: {
+    backgroundColor: '#2196F3',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 32,
+  },
+  startButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
   },
   areasContainer: {
     marginBottom: 32,
@@ -361,22 +398,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1976D2',
     lineHeight: 24,
-  },
-  startButton: {
-    backgroundColor: '#2196F3',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 32,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  startButtonText: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: '600',
   },
 }); 

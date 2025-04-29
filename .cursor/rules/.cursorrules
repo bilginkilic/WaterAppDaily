@@ -1,0 +1,289 @@
+To make the provided information consistent and structured for use in Cursor as a set of rules for a water footprint calculation application, I'll consolidate the original requirements and the provided question data into a clear, actionable rule set. The rules will ensure the application calculates the water footprint, manages tasks and achievements, and integrates the provided question data seamlessly. The response will be concise, structured for Cursor, and aligned with the goal of building a water footprint calculator.
+
+---
+
+### **Water Footprint Application Rules for Cursor**
+
+#### **Purpose**
+The application calculates a user's water footprint based on a one-time survey, assigns tasks (challenges) and achievements based on answers, and encourages sustainable behavior to reduce the footprint. Data is saved locally and synced via an API, with a focus on clear, explanatory UI in English.
+
+#### **Provided Data**
+The application uses the provided `questions` data (10 questions) with the following structure:
+- **Question**: Includes `id`, `category`, `text`, `options`, `trainingText`, and `content` (message, image, video, additionalInfo).
+- **Options**: Each option has `text`, `valueSaving`, `valueTotal`, `task` (description), `category`, and `type` (Achievement, Task, or null for conditional questions).
+- Example:
+  ```json
+  {
+    id: 1,
+    category: categoryIds.DISHWASHING,
+    text: "Do you use a dishwasher to wash your dishes?",
+    options: [
+      { text: "Yes", valueSaving: 111, valueTotal: 15, task: "Well done, you've saved time & 15 litres of water", category: categoryIds.DISHWASHING, type: "Achievement" },
+      { text: "No", valueSaving: 0, valueTotal: 126, task: "Pre-rinsing dishes wastes 1,232 litres of water a year", category: categoryIds.DISHWASHING, type: "Task" }
+    ],
+    ...
+  }
+  ```
+
+#### **Rules**
+
+##### **1. Survey**
+- **Flow**:
+  - Present a one-time survey with 10 questions from the provided `questions` array.
+  - Display each question’s `text` and `options` (as selectable choices).
+  - Use `content.video` to show a video button for educational purposes when re-asking questions in challenges.
+- **Conditional Logic**:
+  - Question 9 ("Do you own a vehicle?") is conditional:
+    - If "No" (`type: null`), skip Question 10 (car washing) and assign `valueTotal: 0`.
+    - If "Yes" (`type: null`), show Question 10.
+  - Conditional questions do not contribute to Achievements or Tasks lists.
+- **Answer Processing**:
+  - For each selected option:
+    - If `type: Achievement`, add to Achievements list with `task` as the description.
+    - If `type: Task`, add to Tasks list with `task` as the description.
+    - Add `valueTotal` to a cumulative `waterFootprint` (no multiplication, only addition).
+  - Store answers in a list:
+    ```json
+    [
+      { questionId: 1, selectedOption: { text: "No", valueSaving: 0, valueTotal: 126, task: "...", type: "Task" } },
+      ...
+    ]
+    ```
+- **Completion**:
+  - After answering all applicable questions, calculate the **initial water footprint** by summing `valueTotal` of selected options.
+  - Reset metrics (`previousTotal`, `additionalUsage`, `newTotal`, `waterFootprint`) to 0 if the survey is taken for the first time or restarted (though restarting is disabled).
+  - Save survey state (answers, tasks, achievements, water footprint) locally and sync via API.
+  - Survey can only be taken **once**; subsequent app entries skip to the Challenges page.
+
+##### **2. Water Footprint Calculation**
+- **Initial Calculation**:
+  - Sum `valueTotal` of all selected options during the survey to get the initial `waterFootprint`.
+  - Example: If user selects options with `valueTotal` values [15, 36, 22, ...], then `waterFootprint = 15 + 36 + 22 + ...`.
+- **Updates**:
+  - When a task is completed (converted to an achievement), update the answer list with the new option.
+  - Recalculate `waterFootprint` by summing `valueTotal` of the updated answer list.
+  - Example: If a task option (`valueTotal: 126`) is replaced with an achievement option (`valueTotal: 15`), the new `waterFootprint` reflects the reduced total.
+- **Display**:
+  - Show the initial and current `waterFootprint` in the Profile section, updating as tasks become achievements.
+  - Do not display `valueSaving` in Achievements (use motivational text instead).
+
+##### **3. Challenges and Achievements**
+- **Challenges Page** (accessed via "Take Challenge" button):
+  - **Tabs**:
+    1. **Challenges**: List active tasks (from Tasks list) with `task` as the description.
+    2. **Achievements**: List achievements with `task` as motivational text (no `valueSaving` displayed).
+    3. **Profile**: Show initial and current `waterFootprint`, updating with progress.
+  - **Task Interaction**:
+    - Display tasks as active (clickable) if `type: Task`; disable if completed (converted to Achievement).
+    - On clicking a task:
+      - Re-ask the associated question (`text` and `options`).
+      - Show a video button linking to `content.video` to educate the user.
+      - If the new selected option’s `type` is `Achievement`:
+        - Update the answer list with the new option.
+        - Move the task to Achievements (use `task` as description).
+        - Disable the task in Challenges.
+        - Recalculate `waterFootprint` using updated `valueTotal` sum.
+        - Save updated state locally and sync via API.
+- **Achievements**:
+  - List all options with `type: Achievement` (from survey or completed tasks).
+  - Use `task` as the display text, ensuring it’s motivational (e.g., "Well done, you've saved time & 15 litres of water").
+  - Update the list when a task converts to an achievement.
+
+##### **4. Profile**
+- Display:
+  - Initial `waterFootprint` (from survey completion).
+  - Current `waterFootprint` (updated as tasks become achievements).
+  - Progress (e.g., reduction from initial to current footprint).
+- Remove the "Restart Challenge" option from the Profile section.
+
+##### **5. State Persistence**
+- Save state after survey completion or task updates:
+  ```json
+  {
+    surveyCompleted: true,
+    answers: [{ questionId: 1, selectedOption: { ... } }, ...],
+    tasks: [{ questionId: 1, task: "Pre-rinsing dishes wastes 1,232 litres of water a year", valueTotal: 126 }, ...],
+    achievements: [{ questionId: 2, task: "Well done for saving water!", valueTotal: 15 }, ...],
+    initialWaterFootprint: 500,
+    currentWaterFootprint: 450
+  }
+  ```
+- On app re-entry:
+  - If `surveyCompleted: true`, open the Challenges page (not survey).
+  - Load saved state to resume from the last session.
+- Persist state across app close/reopen; no survey re-take allowed.
+
+##### **6. Notifications**
+- If tasks exist, send notifications twice daily (morning and evening):
+  - Message: Encourage watching videos and completing tasks (e.g., "Complete a task to reduce your water footprint!").
+- Trigger based on local time (e.g., 8 AM and 8 PM).
+
+##### **7. UI/UX**
+- **Language**: English.
+- **Clarity**:
+  - Use `content.message` and `content.additionalInfo` for explanatory text in survey and challenges.
+  - Display `trainingText` during survey to educate users.
+  - Ensure tasks and achievements are descriptive (use `task` field).
+- **Challenges**:
+  - Active tasks are clickable with clear descriptions (`task`).
+  - Include a video button (`content.video`) when re-asking questions.
+  - Disabled tasks (completed) are greyed out.
+- **Achievements**:
+  - List with motivational `task` text (e.g., "Well done for saving water!").
+- **Images/Videos**:
+  - Use `content.image` for visual aids in survey/challenges.
+  - Link `content.video` for educational content.
+
+##### **8. API Integration**
+- Sync data on:
+  - Survey completion (send answers, tasks, achievements, initial `waterFootprint`).
+  - Task completion (send updated answers, tasks, achievements, new `waterFootprint`).
+- Local storage ensures data consistency if API is unavailable.
+
+##### **9. Testing**
+- **Simulator**:
+  - Test in a simulator; reinstall for fresh state, restart without reinstall for state persistence.
+- **Test Cases**:
+  - **Survey**: Verify question flow, conditional logic (Question 9 → 10), `valueTotal` summation, Achievements/Tasks assignment.
+  - **Challenges**: Click tasks, verify video button, test task-to-achievement conversion, confirm `waterFootprint` updates.
+  - **Persistence**: Close/reopen app, ensure Challenges page loads with saved state.
+  - **Notifications**: Simulate morning/evening, verify task reminders.
+  - **Edge Cases**:
+    - No vehicle (skip Question 10, `valueTotal: 0`).
+    - No tasks (empty Challenges tab).
+    - Survey re-take attempt (blocked).
+- **Data Validation**:
+  - Ensure `valueTotal` sums correctly.
+  - Verify `type` (`Achievement`, `Task`, `null`) assigns correctly to lists.
+
+##### **10. Constraints**
+- No multiplication in `waterFootprint` calculations (only sum `valueTotal`).
+- No "Restart Challenge" in Profile.
+- Survey is one-time; block re-takes.
+- Ignore `valueSaving` for Achievements display (use motivational text).
+- Conditional questions (e.g., Question 9) have `type: null` and `valueTotal: 0`.
+
+---
+
+### **Implementation Notes for Cursor**
+
+#### **File Structure**
+- **questions.js**: Contains the provided `questions` array (already provided).
+- **categories.js**: Defines `categoryIds` (e.g., `DISHWASHING`, `PLUMBING`, etc.).
+- **state.js**: Manages state (survey completion, answers, tasks, achievements, water footprint).
+- **api.js**: Handles API sync (survey completion, task updates).
+- **components/**:
+  - `Survey.js`: Renders survey questions and options.
+  - `Challenges.js`: Displays Challenges, Achievements, Profile tabs.
+  - `Task.js`: Handles task interaction (re-ask question, video button).
+  - `Profile.js`: Shows water footprint and progress.
+
+#### **Pseudo-Code**
+```javascript
+// State Management
+let state = {
+  surveyCompleted: false,
+  answers: [],
+  tasks: [],
+  achievements: [],
+  initialWaterFootprint: 0,
+  currentWaterFootprint: 0
+};
+
+// Survey Logic
+function handleSurveyAnswer(questionId, selectedOption) {
+  if (questionId === 9 && selectedOption.text === "No") {
+    skipQuestion(10);
+  }
+  state.answers.push({ questionId, selectedOption });
+  if (selectedOption.type === "Achievement") {
+    state.achievements.push({ questionId, task: selectedOption.task, valueTotal: selectedOption.valueTotal });
+  } else if (selectedOption.type === "Task") {
+    state.tasks.push({ questionId, task: selectedOption.task, valueTotal: selectedOption.valueTotal });
+  }
+  if (isSurveyComplete()) {
+    state.initialWaterFootprint = calculateWaterFootprint();
+    state.currentWaterFootprint = state.initialWaterFootprint;
+    state.surveyCompleted = true;
+    saveState();
+    syncToAPI();
+    navigateToChallenges();
+  }
+}
+
+function calculateWaterFootprint() {
+  return state.answers.reduce((total, answer) => total + answer.selectedOption.valueTotal, 0);
+}
+
+// Challenge Logic
+function handleTaskClick(task) {
+  showQuestion(task.questionId, { video: questions[task.questionId - 1].content.video });
+  onAnswerSelect(newOption => {
+    if (newOption.type === "Achievement") {
+      updateAnswer(task.questionId, newOption);
+      state.tasks = state.tasks.filter(t => t.questionId !== task.questionId);
+      state.achievements.push({ questionId: task.questionId, task: newOption.task, valueTotal: newOption.valueTotal });
+      state.currentWaterFootprint = calculateWaterFootprint();
+      saveState();
+      syncToAPI();
+    }
+  });
+}
+
+// Persistence
+function loadState() {
+  if (state.surveyCompleted) {
+    navigateToChallenges();
+  } else {
+    navigateToSurvey();
+  }
+}
+
+// Notifications
+function scheduleNotifications() {
+  if (state.tasks.length > 0) {
+    scheduleNotification("8:00 AM", "Complete a task to reduce your water footprint!");
+    scheduleNotification("8:00 PM", "Complete a task to reduce your water footprint!");
+  }
+}
+```
+
+#### **UI Components**
+- **Survey**:
+  - Render `questions[i].text` and `options` as radio buttons.
+  - Show `trainingText` and `content.message` for context.
+- **Challenges**:
+  - List tasks with `task` text; clickable if active, disabled if completed.
+  - Show `content.video` button when re-asking questions.
+- **Achievements**:
+  - List `task` text for each achievement.
+- **Profile**:
+  - Display `initialWaterFootprint` and `currentWaterFootprint`.
+
+---
+
+### **Testing Plan for Cursor**
+1. **Survey**:
+   - Load `questions.js`, verify 10 questions display.
+   - Test Question 9 ("No" skips Question 10; "Yes" shows it).
+   - Select options, confirm `valueTotal` sums to `waterFootprint`.
+   - Verify Achievements/Tasks lists populate correctly.
+2. **Challenges**:
+   - Click a task, ensure question re-appears with `content.video` button.
+   - Select Achievement option, confirm task moves to Achievements, task disables, `waterFootprint` updates.
+3. **Persistence**:
+   - Complete survey, close app, reopen, verify Challenges page loads.
+   - Check saved `answers`, `tasks`, `achievements`, `waterFootprint`.
+4. **Notifications**:
+   - Simulate 8 AM/8 PM, verify notifications if tasks exist.
+5. **Edge Cases**:
+   - No vehicle (Question 9: "No" → skip Question 10, `valueTotal: 0`).
+   - No tasks (Challenges tab empty).
+   - Attempt survey re-take (blocked; redirect to Challenges).
+6. **Simulator**:
+   - Reinstall for fresh state.
+   - Restart without reinstall for state persistence.
+
+---
+
+ 

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const API_URL = 'https://waterappdashboard2.onrender.com/api';
 const TASKS_KEY = 'tasks';
 const ACHIEVEMENTS_KEY = 'achievements';
 const WATER_PROFILE_KEY = 'userWaterProfile';
@@ -35,6 +36,37 @@ class StorageService {
     }
   }
 
+  static async updateAPI(data) {
+    try {
+      const token = await this.getToken();
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await fetch(`${API_URL}/waterprint/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'API update failed');
+      }
+
+      const responseData = await response.json();
+      console.log('API update successful:', responseData);
+      return responseData;
+    } catch (error) {
+      console.error('API update error:', error);
+      // API hatası olsa bile local storage'a kaydetmeye devam et
+      return null;
+    }
+  }
+
   static async saveAchievements(achievements) {
     try {
       if (!Array.isArray(achievements)) {
@@ -45,6 +77,12 @@ class StorageService {
       console.log('Saving achievements:', achievements);
       await AsyncStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
       
+      // API'yi güncelle
+      await this.updateAPI({
+        achievements: achievements,
+        type: 'achievements'
+      });
+      
       // Verify the save was successful
       const savedAchievements = await this.getAchievements();
       console.log('Verified saved achievements:', savedAchievements);
@@ -52,7 +90,13 @@ class StorageService {
       return true;
     } catch (error) {
       console.error('Error saving achievements:', error);
-      throw error;
+      // Local storage'a kaydetmeye çalış
+      try {
+        await AsyncStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(achievements));
+      } catch (storageError) {
+        console.error('Error saving to local storage:', storageError);
+      }
+      return false;
     }
   }
 
@@ -88,9 +132,23 @@ class StorageService {
   static async saveWaterProfile(profile) {
     try {
       await AsyncStorage.setItem(WATER_PROFILE_KEY, JSON.stringify(profile));
+      
+      // API'yi güncelle
+      await this.updateAPI({
+        waterProfile: profile,
+        type: 'waterProfile'
+      });
+      
+      return true;
     } catch (error) {
       console.error('Error saving water profile:', error);
-      throw error;
+      // Local storage'a kaydetmeye çalış
+      try {
+        await AsyncStorage.setItem(WATER_PROFILE_KEY, JSON.stringify(profile));
+      } catch (storageError) {
+        console.error('Error saving to local storage:', storageError);
+      }
+      return false;
     }
   }
 
@@ -373,8 +431,7 @@ class StorageService {
 
   static async getToken() {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      return token;
+      return await AsyncStorage.getItem('userToken');
     } catch (error) {
       console.error('Error getting token:', error);
       return null;
@@ -383,8 +440,15 @@ class StorageService {
 
   static async resetUserData() {
     try {
-      // Clear all user-related data
-      await AsyncStorage.multiRemove([
+      // Log start of reset
+      console.log('👋 Starting complete user data reset...');
+      
+      // Get all keys to see what we're deleting
+      const allKeys = await AsyncStorage.getAllKeys();
+      console.log('Current keys in storage:', allKeys);
+      
+      // Clear all user-related data with expanded list of keys
+      const keysToRemove = [
         TASKS_KEY,
         ACHIEVEMENTS_KEY,
         WATER_PROFILE_KEY,
@@ -392,12 +456,26 @@ class StorageService {
         'progress',
         'surveyResults',
         'initialSurvey',
-        'token'
-      ]);
-      console.log('All user data has been reset successfully');
+        'userToken',
+        'userId',
+        'userName',
+        'userEmail',
+        'pastChallenges',
+        'token',
+        'savedEmail' // Also remove saved email for complete reset
+      ];
+      
+      console.log('🗑️ Removing these keys:', keysToRemove);
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      // Verify keys were removed
+      const remainingKeys = await AsyncStorage.getAllKeys();
+      console.log('Remaining keys after reset:', remainingKeys);
+      
+      console.log('✅ All user data has been reset successfully');
       return true;
     } catch (error) {
-      console.error('Error resetting user data:', error);
+      console.error('❌ Error resetting user data:', error);
       return false;
     }
   }

@@ -10,11 +10,10 @@ import {
 } from 'react-native';
 import strings from '../localization/strings';
 import questions from '../data/questions';
-import { StorageService } from '../services';
+import DataService from '../services/DataService';
 
 export const SurveyScreen = ({ navigation }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState([]);
   const [surveyResults, setSurveyResults] = useState({
     totalWaterFootprint: 0,
     tasks: [],
@@ -35,61 +34,39 @@ export const SurveyScreen = ({ navigation }) => {
       category: option.category
     });
 
-    const newAnswers = [...answers, { 
-      questionId: questions[currentQuestion].id, 
-      answer: option,
-      type: option.type
-    }];
-    setAnswers(newAnswers);
+    // Save answer using DataService
+    await DataService.saveSurveyAnswer(questions[currentQuestion].id, option);
 
-    // Calculate new water footprint - only if type exists
-    const previousWaterFootprint = surveyResults.totalWaterFootprint;
-    const additionalWaterUsage = option.type ? (option.valueTotal || 0) : 0;
-    const waterFootprint = previousWaterFootprint + additionalWaterUsage;
-
-    console.log('\nWater Footprint Calculation:');
-    console.log('Previous Total:', previousWaterFootprint, 'L');
-    console.log('Additional Usage:', additionalWaterUsage, 'L');
-    console.log('New Total:', waterFootprint, 'L');
-
-    // Create new task or achievement only if type exists
-    let newItem = null;
-    if (option.type && option.type !== 'null') {
-      newItem = {
-        id: questions[currentQuestion].id,
-        category: option.category || questions[currentQuestion].category,
-        description: option.text,
-        waterUsage: option.valueTotal || 0,
-        type: option.type,
-        date: new Date().toISOString()
-      };
-      console.log(`\nCreating new ${option.type}:`, newItem);
-    }
+    // Get updated data
+    const waterFootprint = await DataService.getWaterFootprint();
+    const tasks = await DataService.getTasks();
+    const achievements = await DataService.getAchievements();
 
     const newResults = {
       totalWaterFootprint: waterFootprint,
-      tasks: newItem && newItem.type === 'Task' ? 
-        [...surveyResults.tasks, newItem] : 
-        surveyResults.tasks,
-      achievements: newItem && newItem.type === 'Achievement' ? 
-        [...surveyResults.achievements, newItem] : 
-        surveyResults.achievements
+      tasks,
+      achievements
     };
 
     console.log('\nCurrent Survey Status:');
     console.log('Total Water Footprint:', waterFootprint, 'L');
-    console.log('Total Tasks:', newResults.tasks.length);
-    console.log('Total Achievements:', newResults.achievements.length);
+    console.log('Total Tasks:', tasks.length);
+    console.log('Total Achievements:', achievements.length);
     console.log('Question Progress:', `${currentQuestion + 1}/${questions.length}`);
     console.log('===============================\n');
 
     setSurveyResults(newResults);
-    await StorageService.saveSurveyResults(newResults);
 
     if (currentQuestion + 1 < questions.length) {
-      // Skip car washing question if user doesn't have a car
-      if (questions[currentQuestion].id === 9 && option.text === 'No') {
-        setCurrentQuestion(prev => prev + 2); // Skip next question
+      // Araç sahipliği sorusu (id: 9) için özel mantık
+      if (questions[currentQuestion].id === 9) {
+        if (option.text === 'No') {
+          // Araç yoksa survey'i bitir
+          handleSurveyComplete();
+        } else {
+          // Araç varsa sonraki soruya geç
+          setCurrentQuestion(prev => prev + 1);
+        }
       } else {
         setCurrentQuestion(prev => prev + 1);
       }
@@ -100,93 +77,50 @@ export const SurveyScreen = ({ navigation }) => {
 
   const handleSurveyComplete = async () => {
     try {
-      // Calculate correct answers count (same as achievements count)
-      const correctAnswersCount = surveyResults.achievements.length;
+      // Get all current data
+      const currentWaterFootprint = await DataService.getWaterFootprint();
+      const currentTasks = await DataService.getTasks();
+      const currentAchievements = await DataService.getAchievements();
+      const currentAnswers = await DataService.getSurveyAnswers();
 
-      // Format answers for API
-      const formattedAnswers = answers.map(answer => ({
-        questionId: answer.questionId,
-        answer: answer.answer.text,
-        isCorrect: answer.answer.type === 'Achievement',
-        valueTotal: answer.answer.valueTotal || 0,
-        type: answer.answer.type
-      }));
+      // Calculate potential monthly saving
+      const potentialMonthlySaving = await DataService.calculatePotentialMonthlySaving();
 
-      console.log('\n=== SURVEY COMPLETED ===');
-      console.log('Final Water Footprint:', surveyResults.totalWaterFootprint, 'L');
-      console.log('Total Tasks Created:', surveyResults.tasks.length);
-      console.log('Total Achievements:', surveyResults.achievements.length);
-      console.log('Correct Answers Count:', correctAnswersCount);
-      console.log('Formatted Answers:', formattedAnswers);
-      console.log('=======================\n');
-
-      // Get improvement areas from tasks
-      const improvementAreas = surveyResults.tasks.reduce((acc, task) => {
-        if (task.category && !acc.includes(task.category)) {
-          acc.push(task.category);
-        }
-        return acc;
-      }, []);
-
-      // Save initial survey data
-      await StorageService.saveInitialSurvey({
-        answers: formattedAnswers,
-        correctAnswersCount,
-        totalWaterFootprint: surveyResults.totalWaterFootprint,
-        tasks: surveyResults.tasks,
-        achievements: surveyResults.achievements
+      console.log('Survey Completion Data:', {
+        waterFootprint: currentWaterFootprint,
+        tasks: currentTasks,
+        achievements: currentAchievements,
+        potentialMonthlySaving
       });
+
+      // Format survey results
+      const formattedResults = {
+        totalWaterFootprint: currentWaterFootprint,
+        tasks: currentTasks,
+        achievements: currentAchievements,
+        answers: currentAnswers,
+        potentialMonthlySaving: potentialMonthlySaving
+      };
 
       // Save survey results
-      await StorageService.saveSurveyResults(surveyResults);
+      await DataService.saveSurveyAnswers(formattedResults);
+      await DataService.markSurveyCompleted();
 
-      // Navigate to results screen with all required data
-      navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'SurveyResults',
-            params: {
-              results: {
-                tasks: surveyResults.tasks,
-                achievements: surveyResults.achievements,
-                totalWaterFootprint: surveyResults.totalWaterFootprint,
-                improvementAreas,
-                answers: formattedAnswers,
-                correctAnswersCount
-              }
-            }
-          }
-        ]
-      });
+      // Navigate to results screen
+      navigation.replace('SurveyResults', { results: formattedResults });
     } catch (error) {
       console.error('Error completing survey:', error);
-      Alert.alert(
-        'Error',
-        'Failed to complete survey. Please try again.',
-        [
-          {
-            text: 'Try Again',
-            onPress: () => handleSurveyComplete()
-          },
-          {
-            text: 'Cancel',
-            onPress: () => navigation.goBack(),
-            style: 'cancel'
-          }
-        ]
-      );
+      Alert.alert('Error', 'Failed to complete survey. Please try again.');
     }
   };
 
   useEffect(() => {
     const initializeSurvey = async () => {
       // Clear all previous results
-      await StorageService.clearStorage();
+      await DataService.clearAllData();
       
       // Reset all state
       setCurrentQuestion(0);
-      setAnswers([]);
       setSurveyResults({
         totalWaterFootprint: 0,
         tasks: [],
@@ -206,7 +140,7 @@ export const SurveyScreen = ({ navigation }) => {
   const currentQ = questions[currentQuestion];
   if (!currentQ || !currentQ.text) {
     console.error('Current question is undefined or missing text property');
-    return null; // veya uygun bir hata mesajı göster
+    return null;
   }
 
   return (
