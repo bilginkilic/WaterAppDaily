@@ -1,4 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 Data Service Rules for Centralized Data Management
+src/services/DataService.js bu dosya bu amacla olusturuldu
 This document outlines the service rules for managing local data in a centralized manner. The goal is to ensure consistent data handling, storage, and retrieval across the application, maintaining a single source of truth for all data operations.
 Objective
 Centralize local data management to:
@@ -100,3 +106,7 @@ Validate response data before storing (e.g., check for valid questionId, type, e
 Consider implementing error handling for edge cases (e.g., missing questions in src/data/questions.js).
 Timestamps should use a consistent format (e.g., ISO 8601) for easier debugging and analysis.
 
+Yukarıdaki işlemlerin tamamı lokaldeki veri işlemlerinde kullanılır.
+src/services/StorageService.js bunu ise sadece API işlemlerinde kullan.
+Bunların dışında veri yönetimi için baska servis kullanılmayacak.
+Gerekirse bu servislere ekleme yapılabilir.

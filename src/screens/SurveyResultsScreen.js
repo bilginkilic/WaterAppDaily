@@ -12,9 +12,9 @@ import {
 import strings from '../localization/strings';
 import { categories } from '../data/categories';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import StorageService from '../services/StorageService';
 import { useAuth } from '../context/AuthContext';
+import DataService from '../services/DataService';
 
 const { width } = Dimensions.get('window');
 
@@ -26,7 +26,7 @@ const formatWaterVolume = (liters) => {
 };
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
-  const { signIn } = useAuth();
+  const { user } = useAuth();
   const { results } = route.params;
   const waterFootprint = results?.totalWaterFootprint || 0;
   const tasks = results?.tasks || [];
@@ -66,14 +66,10 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   
   const handleStartChallenge = async () => {
     try {
-      // Get user email from storage
-      const userEmail = await AsyncStorage.getItem('savedEmail');
-      if (!userEmail) {
-        throw new Error('User email not found');
+      // Verify user is logged in
+      if (!user || !user.email) {
+        throw new Error('User not authenticated');
       }
-
-      // Sign in the user first
-      await signIn({ email: userEmail });
 
       // Calculate initial water footprint from answers
       const answers = results?.answers || [];
@@ -90,6 +86,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         achievements: results.achievements
       };
 
+      console.log('Starting challenge for user:', user.email);
       console.log('Saving water profile:', waterProfileData);
 
       // Save all data
@@ -105,8 +102,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         console.warn('Some data could not be saved to API but continued with local storage');
       }
 
-      // Mark survey as completed for this email
-      await AsyncStorage.setItem(`survey_completed_${userEmail}`, 'true');
+      // Mark survey as completed
+      await DataService.markSurveyCompleted();
 
       // Navigate to challenges screen
       console.log('Starting challenges with params:', { 
@@ -114,8 +111,6 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         waterProfile: waterProfileData 
       });
       
-      // After sign in, the navigation structure will change automatically
-      // and the Challenges screen will be available
       navigation.replace('Challenges', {
         improvementAreas: [],
         waterProfile: waterProfileData
