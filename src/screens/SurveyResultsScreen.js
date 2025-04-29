@@ -66,6 +66,15 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   
   const handleStartChallenge = async () => {
     try {
+      // Get user email from storage
+      const userEmail = await AsyncStorage.getItem('savedEmail');
+      if (!userEmail) {
+        throw new Error('User email not found');
+      }
+
+      // Sign in the user first
+      await signIn({ email: userEmail });
+
       // Calculate initial water footprint from answers
       const answers = results?.answers || [];
       const initialWaterFootprint = answers.reduce((total, answer) => {
@@ -96,15 +105,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         console.warn('Some data could not be saved to API but continued with local storage');
       }
 
-      // Get user email from storage
-      const userEmail = await AsyncStorage.getItem('savedEmail');
-      if (userEmail) {
-        // Mark survey as completed for this email
-        await AsyncStorage.setItem(`survey_completed_${userEmail}`, 'true');
-        
-        // Sign in the user
-        await signIn({ email: userEmail });
-      }
+      // Mark survey as completed for this email
+      await AsyncStorage.setItem(`survey_completed_${userEmail}`, 'true');
 
       // Navigate to challenges screen
       console.log('Starting challenges with params:', { 
@@ -112,6 +114,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         waterProfile: waterProfileData 
       });
       
+      // After sign in, the navigation structure will change automatically
+      // and the Challenges screen will be available
       navigation.replace('Challenges', {
         improvementAreas: [],
         waterProfile: waterProfileData
@@ -119,31 +123,15 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error starting challenge:', error);
       Alert.alert(
-        'Warning',
-        'Some data could not be saved to the server, but you can continue using the app. Your data will be synchronized when the connection is restored.'
-      );
-      
-      // Try to navigate anyway after signing in
-      try {
-        const userEmail = await AsyncStorage.getItem('savedEmail');
-        if (userEmail) {
-          await signIn({ email: userEmail });
-        }
-        
-        navigation.replace('Challenges', {
-          improvementAreas: [],
-          waterProfile: {
-            initialWaterprint: 0,
-            dailyUsage: 0,
-            lastUpdated: new Date().toISOString(),
-            tasks: results.tasks,
-            achievements: results.achievements
+        'Error',
+        'Could not start the challenge. Please try again.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.replace('Login')
           }
-        });
-      } catch (signInError) {
-        console.error('Error signing in:', signInError);
-        Alert.alert('Error', 'Could not start the challenge. Please try again.');
-      }
+        ]
+      );
     }
   };
 

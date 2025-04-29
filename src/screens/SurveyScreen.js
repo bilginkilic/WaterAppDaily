@@ -82,7 +82,7 @@ export const SurveyScreen = ({ navigation }) => {
       const currentTasks = await DataService.getTasks();
       const currentAchievements = await DataService.getAchievements();
       const currentAnswers = await DataService.getSurveyAnswers();
-
+      
       // Calculate potential monthly saving
       const potentialMonthlySaving = await DataService.calculatePotentialMonthlySaving();
 
@@ -93,21 +93,19 @@ export const SurveyScreen = ({ navigation }) => {
         potentialMonthlySaving
       });
 
-      // Format survey results
-      const formattedResults = {
-        totalWaterFootprint: currentWaterFootprint,
-        tasks: currentTasks,
-        achievements: currentAchievements,
-        answers: currentAnswers,
-        potentialMonthlySaving: potentialMonthlySaving
-      };
-
-      // Save survey results
-      await DataService.saveSurveyAnswers(formattedResults);
+      // Mark survey as completed first
       await DataService.markSurveyCompleted();
 
-      // Navigate to results screen
-      navigation.replace('SurveyResults', { results: formattedResults });
+      // Navigate to results screen with all data
+      navigation.replace('SurveyResults', {
+        results: {
+          totalWaterFootprint: currentWaterFootprint,
+          tasks: currentTasks,
+          achievements: currentAchievements,
+          answers: currentAnswers,
+          potentialMonthlySaving: potentialMonthlySaving
+        }
+      });
     } catch (error) {
       console.error('Error completing survey:', error);
       Alert.alert('Error', 'Failed to complete survey. Please try again.');

@@ -11,8 +11,11 @@ import {
 } from 'react-native';
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 export const LoginScreen = ({ navigation }) => {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -26,28 +29,39 @@ export const LoginScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // TODO: Implement actual login logic here
-      // For now, we'll just simulate a successful login
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // API üzerinden giriş yap
+      const response = await api.login(email, password);
+      console.log('Login response:', response);
 
-      // Save user data
-      await DataService.setUserData(email);
+      // Kullanıcı verilerini kaydet
+      await DataService.setUserData({
+        email,
+        isLoggedIn: true,
+        surveyTaken: false
+      });
 
-      // Check if survey is completed
-      const surveyCompleted = await DataService.isSurveyCompleted();
+      // AuthContext'e giriş bilgilerini kaydet
+      await signIn(response.token, {
+        id: response.userId,
+        email: email,
+        name: response.name || email.split('@')[0]
+      });
+
+      // Survey durumunu kontrol et
+      const isSurveyCompleted = await DataService.isSurveyCompleted();
       
-      if (surveyCompleted) {
-        // Survey already completed, navigate to Main
+      if (isSurveyCompleted) {
+        // Survey tamamlanmış, Main ekranına git
         navigation.replace('Main');
       } else {
-        // Survey not completed, navigate to Intro
+        // Survey tamamlanmamış, Intro ekranına git
         navigation.replace('Intro');
       }
     } catch (error) {
       console.error('Login error:', error);
       Alert.alert(
         'Login Failed',
-        'Please check your internet connection and credentials, then try again.'
+        error.response?.data?.message || 'Please check your credentials and try again.'
       );
     } finally {
       setIsLoading(false);

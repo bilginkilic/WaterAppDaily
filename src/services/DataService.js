@@ -1,192 +1,164 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-class DataService {
-  // Storage keys
-  static STORAGE_KEYS = {
-    USER_DATA: 'userData',
-    SURVEY_ANSWERS: 'surveyAnswers',
-    TASKS: 'tasks',
-    ACHIEVEMENTS: 'achievements',
-    WATER_FOOTPRINT: 'waterFootprint',
-    SURVEY_COMPLETED: 'surveyCompleted'
-  };
+const STORAGE_KEYS = {
+  USER_DATA: '@user_data',
+  SURVEY_ANSWERS: '@survey_answers',
+  TASKS: '@tasks',
+  ACHIEVEMENTS: '@achievements',
+  SURVEY_COMPLETED: '@survey_completed',
+  WATER_FOOTPRINT: '@water_footprint'
+};
 
-  // User data operations
-  static async setUserData(email) {
+class DataService {
+  static async setUserData(userData) {
     try {
-      const userData = {
-        email,
-        loggedIn: true,
-        surveyTaken: false,
-        timestamp: new Date().toISOString()
-      };
-      await AsyncStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
-      return true;
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
     } catch (error) {
-      console.error('Error setting user data:', error);
-      return false;
+      console.error('Error saving user data:', error);
+      throw error;
     }
   }
 
   static async getUserData() {
     try {
-      const data = await AsyncStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Error getting user data:', error);
-      return null;
-    }
-  }
-
-  // Survey operations
-  static async saveSurveyAnswer(questionId, answer) {
-    try {
-      const currentAnswers = await this.getSurveyAnswers();
-      const newAnswer = {
-        questionId,
-        answer: answer.text,
-        valueTotal: answer.valueTotal || 0,
-        type: answer.type,
-        valueSaving: answer.valueSaving || 0,
-        timestamp: new Date().toISOString()
-      };
-
-      const updatedAnswers = [...(currentAnswers || []), newAnswer];
-      await AsyncStorage.setItem(this.STORAGE_KEYS.SURVEY_ANSWERS, JSON.stringify(updatedAnswers));
-
-      // Update tasks or achievements based on answer type
-      if (answer.type === 'Task') {
-        await this.addTask(newAnswer);
-      } else if (answer.type === 'Achievement') {
-        await this.addAchievement(newAnswer);
-      }
-
-      // Update water footprint
-      await this.updateWaterFootprint();
-
-      return true;
-    } catch (error) {
-      console.error('Error saving survey answer:', error);
-      return false;
-    }
-  }
-
-  static async getSurveyAnswers() {
-    try {
-      const answers = await AsyncStorage.getItem(this.STORAGE_KEYS.SURVEY_ANSWERS);
-      return answers ? JSON.parse(answers) : [];
-    } catch (error) {
-      console.error('Error getting survey answers:', error);
-      return [];
-    }
-  }
-
-  // Task operations
-  static async addTask(taskData) {
-    try {
-      const currentTasks = await this.getTasks();
-      const newTask = {
-        ...taskData,
-        completed: false
-      };
-      const updatedTasks = [...currentTasks, newTask];
-      await AsyncStorage.setItem(this.STORAGE_KEYS.TASKS, JSON.stringify(updatedTasks));
-      return true;
-    } catch (error) {
-      console.error('Error adding task:', error);
-      return false;
-    }
-  }
-
-  static async getTasks() {
-    try {
-      const tasks = await AsyncStorage.getItem(this.STORAGE_KEYS.TASKS);
-      return tasks ? JSON.parse(tasks) : [];
-    } catch (error) {
-      console.error('Error getting tasks:', error);
-      return [];
-    }
-  }
-
-  // Achievement operations
-  static async addAchievement(achievementData) {
-    try {
-      const currentAchievements = await this.getAchievements();
-      const newAchievement = {
-        ...achievementData,
-        completed: true
-      };
-      const updatedAchievements = [...currentAchievements, newAchievement];
-      await AsyncStorage.setItem(this.STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(updatedAchievements));
-      return true;
-    } catch (error) {
-      console.error('Error adding achievement:', error);
-      return false;
-    }
-  }
-
-  static async getAchievements() {
-    try {
-      const achievements = await AsyncStorage.getItem(this.STORAGE_KEYS.ACHIEVEMENTS);
-      return achievements ? JSON.parse(achievements) : [];
-    } catch (error) {
-      console.error('Error getting achievements:', error);
-      return [];
-    }
-  }
-
-  // Water footprint operations
-  static async updateWaterFootprint() {
-    try {
-      const answers = await this.getSurveyAnswers();
-      const waterFootprint = answers.reduce((total, answer) => total + (answer.valueTotal || 0), 0);
-      await AsyncStorage.setItem(this.STORAGE_KEYS.WATER_FOOTPRINT, JSON.stringify(waterFootprint));
-      return waterFootprint;
-    } catch (error) {
-      console.error('Error updating water footprint:', error);
-      return 0;
-    }
-  }
-
-  static async getWaterFootprint() {
-    try {
-      const footprint = await AsyncStorage.getItem(this.STORAGE_KEYS.WATER_FOOTPRINT);
-      return footprint ? JSON.parse(footprint) : 0;
-    } catch (error) {
-      console.error('Error getting water footprint:', error);
-      return 0;
-    }
-  }
-
-  // Survey completion status
-  static async markSurveyCompleted() {
-    try {
-      await AsyncStorage.setItem(this.STORAGE_KEYS.SURVEY_COMPLETED, 'true');
-      return true;
-    } catch (error) {
-      console.error('Error marking survey as completed:', error);
-      return false;
+      throw error;
     }
   }
 
   static async isSurveyCompleted() {
     try {
-      const completed = await AsyncStorage.getItem(this.STORAGE_KEYS.SURVEY_COMPLETED);
+      const completed = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_COMPLETED);
       return completed === 'true';
     } catch (error) {
-      console.error('Error checking survey completion status:', error);
+      console.error('Error checking survey completion:', error);
       return false;
     }
   }
 
-  // Clear all data
+  static async markSurveyCompleted() {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_COMPLETED, 'true');
+    } catch (error) {
+      console.error('Error marking survey as completed:', error);
+      throw error;
+    }
+  }
+
+  static async saveSurveyAnswer(answer) {
+    try {
+      const answers = await this.getSurveyAnswers() || [];
+      answers.push({
+        ...answer,
+        timestamp: new Date().toISOString()
+      });
+      await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_ANSWERS, JSON.stringify(answers));
+
+      // Update tasks or achievements based on answer type
+      if (answer.type === 'Task') {
+        await this.addTask(answer);
+      } else if (answer.type === 'Achievement') {
+        await this.addAchievement(answer);
+      }
+
+      // Update water footprint
+      await this.updateWaterFootprint(answer.valueTotal);
+    } catch (error) {
+      console.error('Error saving survey answer:', error);
+      throw error;
+    }
+  }
+
+  static async getSurveyAnswers() {
+    try {
+      const answers = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_ANSWERS);
+      return answers ? JSON.parse(answers) : [];
+    } catch (error) {
+      console.error('Error getting survey answers:', error);
+      throw error;
+    }
+  }
+
+  static async addTask(task) {
+    try {
+      const tasks = await this.getTasks() || [];
+      tasks.push({
+        ...task,
+        timestamp: new Date().toISOString()
+      });
+      await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
+  }
+
+  static async getTasks() {
+    try {
+      const tasks = await AsyncStorage.getItem(STORAGE_KEYS.TASKS);
+      return tasks ? JSON.parse(tasks) : [];
+    } catch (error) {
+      console.error('Error getting tasks:', error);
+      throw error;
+    }
+  }
+
+  static async addAchievement(achievement) {
+    try {
+      const achievements = await this.getAchievements() || [];
+      achievements.push({
+        ...achievement,
+        timestamp: new Date().toISOString()
+      });
+      await AsyncStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+    } catch (error) {
+      console.error('Error adding achievement:', error);
+      throw error;
+    }
+  }
+
+  static async getAchievements() {
+    try {
+      const achievements = await AsyncStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS);
+      return achievements ? JSON.parse(achievements) : [];
+    } catch (error) {
+      console.error('Error getting achievements:', error);
+      throw error;
+    }
+  }
+
+  static async updateWaterFootprint(value) {
+    try {
+      const currentFootprint = await this.getWaterFootprint() || 0;
+      const newFootprint = currentFootprint + value;
+      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, newFootprint.toString());
+      return newFootprint;
+    } catch (error) {
+      console.error('Error updating water footprint:', error);
+      throw error;
+    }
+  }
+
+  static async getWaterFootprint() {
+    try {
+      const footprint = await AsyncStorage.getItem(STORAGE_KEYS.WATER_FOOTPRINT);
+      return footprint ? parseFloat(footprint) : 0;
+    } catch (error) {
+      console.error('Error getting water footprint:', error);
+      throw error;
+    }
+  }
+
   static async clearAllData() {
     try {
-      await AsyncStorage.multiRemove(Object.values(this.STORAGE_KEYS));
-      return true;
+      const keys = Object.values(STORAGE_KEYS);
+      await AsyncStorage.multiRemove(keys);
     } catch (error) {
       console.error('Error clearing all data:', error);
-      return false;
+      throw error;
     }
   }
 

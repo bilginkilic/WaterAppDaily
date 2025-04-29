@@ -13,6 +13,25 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 
+// Auth stack for unauthenticated users
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Intro" component={IntroScreen} />
+    <Stack.Screen name="Survey" component={SurveyScreen} />
+    <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
+  </Stack.Navigator>
+);
+
+// App stack for authenticated users
+const AppStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Challenges" component={ChallengesScreen} />
+    <Stack.Screen name="Survey" component={SurveyScreen} />
+    <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
+  </Stack.Navigator>
+);
+
 function AppContent() {
   const { isLoading, token } = useAuth();
 
@@ -47,34 +66,12 @@ function AppContent() {
   }, []);
 
   if (isLoading) {
-    // Burada bir loading ekranı gösterebilirsiniz
     return null;
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false
-        }}
-      >
-        {!token ? (
-          // Unauthenticated user flow
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Intro" component={IntroScreen} />
-            <Stack.Screen name="Survey" component={SurveyScreen} />
-            <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
-          </>
-        ) : (
-          // Authenticated user flow
-          <>
-            <Stack.Screen name="Challenges" component={ChallengesScreen} />
-            <Stack.Screen name="Survey" component={SurveyScreen} />
-            <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
-          </>
-        )}
-      </Stack.Navigator>
+      {token ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }

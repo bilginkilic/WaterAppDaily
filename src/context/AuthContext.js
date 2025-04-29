@@ -47,22 +47,28 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (token, user) => {
     try {
-      console.log('🔑 Starting sign in process with:', { token: token ? '✅ Valid' : '❌ Invalid', user });
+      console.log('🔑 Starting sign in process with:', { 
+        token: token ? '✅ Valid' : '❌ Invalid', 
+        user: user || '❌ No user data'
+      });
 
       if (!token || !user || !user.id) {
         console.error('❌ Invalid sign in data:', { token, user });
-        throw new Error('Geçersiz giriş bilgileri');
+        throw new Error('Invalid login credentials');
       }
 
-      // AsyncStorage'a kaydet
-      await AsyncStorage.setItem('userToken', token);
-      await AsyncStorage.setItem('userId', user.id);
-      if (user.name) await AsyncStorage.setItem('userName', user.name);
-      if (user.email) await AsyncStorage.setItem('userEmail', user.email);
-      
-      console.log('✅ Auth data saved to AsyncStorage successfully');
+      // Save to AsyncStorage
+      const storagePromises = [
+        AsyncStorage.setItem('userToken', token),
+        AsyncStorage.setItem('userId', user.id),
+        AsyncStorage.setItem('userName', user.name || ''),
+        AsyncStorage.setItem('userEmail', user.email || '')
+      ];
 
-      // State'i güncelle
+      await Promise.all(storagePromises);
+      console.log('✅ Auth data saved to AsyncStorage');
+
+      // Update state
       setUserToken(token);
       setUserData({
         id: user.id,
@@ -70,8 +76,7 @@ export const AuthProvider = ({ children }) => {
         email: user.email || ''
       });
 
-      console.log('✅ Auth state updated successfully - User is now logged in');
-      
+      console.log('✅ Auth state updated - User logged in');
       return true;
     } catch (error) {
       console.error('❌ Sign in error:', error);
@@ -82,14 +87,12 @@ export const AuthProvider = ({ children }) => {
   const signOut = async () => {
     try {
       console.log('🚪 Signing out...');
-      await AsyncStorage.removeItem('userToken');
-      await AsyncStorage.removeItem('userId');
-      await AsyncStorage.removeItem('userName');
-      await AsyncStorage.removeItem('userEmail');
+      const keys = ['userToken', 'userId', 'userName', 'userEmail'];
+      await AsyncStorage.multiRemove(keys);
       
       setUserToken(null);
       setUserData(null);
-      console.log('✅ Sign out completed successfully');
+      console.log('✅ Sign out completed');
     } catch (error) {
       console.error('❌ Sign out error:', error);
       throw error;
