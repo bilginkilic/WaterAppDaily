@@ -22,56 +22,62 @@ export const SurveyScreen = ({ navigation }) => {
 
   const handleAnswer = async (option) => {
     console.log('\n=== PROCESSING NEW ANSWER ===');
-    console.log('Question:', {
-      id: questions[currentQuestion].id,
-      text: questions[currentQuestion].text,
-      category: questions[currentQuestion].category
-    });
-    console.log('Selected Option:', {
-      text: option.text,
+    const currentQ = questions[currentQuestion];
+    
+    // Prepare answer data
+    const answer = {
+      questionId: currentQ.id,
+      answer: option.text,
+      valueTotal: option.valueTotal || 0,
       type: option.type,
-      waterUsage: option.valueTotal,
-      category: option.category
-    });
-
-    // Save answer using DataService
-    await DataService.saveSurveyAnswer(questions[currentQuestion].id, option);
-
-    // Get updated data
-    const waterFootprint = await DataService.getWaterFootprint();
-    const tasks = await DataService.getTasks();
-    const achievements = await DataService.getAchievements();
-
-    const newResults = {
-      totalWaterFootprint: waterFootprint,
-      tasks,
-      achievements
+      valueSaving: option.valueSaving || 0,
+      timestamp: new Date().toISOString(),
+      category: currentQ.category
     };
 
-    console.log('\nCurrent Survey Status:');
-    console.log('Total Water Footprint:', waterFootprint, 'L');
-    console.log('Total Tasks:', tasks.length);
-    console.log('Total Achievements:', achievements.length);
-    console.log('Question Progress:', `${currentQuestion + 1}/${questions.length}`);
-    console.log('===============================\n');
+    console.log('Processing Answer:', {
+      questionId: answer.questionId,
+      answer: answer.answer,
+      type: answer.type,
+      valueTotal: answer.valueTotal,
+      valueSaving: answer.valueSaving
+    });
 
-    setSurveyResults(newResults);
+    try {
+      // Save the answer using DataService (this will also handle Task/Achievement addition)
+      await DataService.saveSurveyAnswer(answer);
 
-    if (currentQuestion + 1 < questions.length) {
-      // Araç sahipliği sorusu (id: 9) için özel mantık
-      if (questions[currentQuestion].id === 9) {
-        if (option.text === 'No') {
-          // Araç yoksa survey'i bitir
+      // Get updated data
+      const waterFootprint = await DataService.getWaterFootprint();
+      const tasks = await DataService.getTasks();
+      const achievements = await DataService.getAchievements();
+
+      console.log('\nCurrent Survey Status:');
+      console.log('Total Water Footprint:', waterFootprint, 'L');
+      console.log('Total Tasks:', tasks.length);
+      console.log('Total Achievements:', achievements.length);
+      console.log('Question Progress:', `${currentQuestion + 1}/${questions.length}`);
+
+      // Update state with new results
+      setSurveyResults({
+        totalWaterFootprint: waterFootprint,
+        tasks,
+        achievements
+      });
+
+      // Handle navigation logic
+      if (currentQuestion + 1 < questions.length) {
+        if (currentQ.id === 9 && option.text === 'No') {
           handleSurveyComplete();
         } else {
-          // Araç varsa sonraki soruya geç
           setCurrentQuestion(prev => prev + 1);
         }
       } else {
-        setCurrentQuestion(prev => prev + 1);
+        handleSurveyComplete();
       }
-    } else {
-      handleSurveyComplete();
+    } catch (error) {
+      console.error('Error processing answer:', error);
+      Alert.alert('Error', 'Failed to save your answer. Please try again.');
     }
   };
 

@@ -34,11 +34,12 @@ export const LoginScreen = ({ navigation }) => {
       console.log('Login response:', response);
 
       // Kullanıcı verilerini kaydet
-      await DataService.setUserData({
+      const userData = {
         email,
         isLoggedIn: true,
-        surveyTaken: false
-      });
+        surveyTaken: false // İlk girişte survey yapılmamış olarak işaretle
+      };
+      await DataService.setUserData(userData);
 
       // AuthContext'e giriş bilgilerini kaydet
       await signIn(response.token, {
@@ -47,14 +48,17 @@ export const LoginScreen = ({ navigation }) => {
         name: response.name || email.split('@')[0]
       });
 
-      // Survey durumunu kontrol et
-      const isSurveyCompleted = await DataService.isSurveyCompleted();
+      // Kullanıcının survey durumunu kontrol et
+      const existingUserData = await DataService.getUserData();
+      const isSurveyTaken = existingUserData?.surveyTaken || false;
       
-      if (isSurveyCompleted) {
-        // Survey tamamlanmış, Main ekranına git
+      if (isSurveyTaken) {
+        // Kullanıcı daha önce survey'i tamamlamış, Main ekranına yönlendir
+        console.log('Survey completed before, navigating to Main');
         navigation.replace('Main');
       } else {
-        // Survey tamamlanmamış, Intro ekranına git
+        // İlk giriş, Intro ekranına yönlendir
+        console.log('First login, navigating to Intro');
         navigation.replace('Intro');
       }
     } catch (error) {

@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
 class DataService {
   static async setUserData(userData) {
     try {
+      console.log('Setting user data:', userData);
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(userData));
     } catch (error) {
       console.error('Error saving user data:', error);
@@ -22,6 +23,7 @@ class DataService {
   static async getUserData() {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
+      console.log('Getting user data:', data ? JSON.parse(data) : null);
       return data ? JSON.parse(data) : null;
     } catch (error) {
       console.error('Error getting user data:', error);
@@ -31,8 +33,10 @@ class DataService {
 
   static async isSurveyCompleted() {
     try {
-      const completed = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_COMPLETED);
-      return completed === 'true';
+      const userData = await this.getUserData();
+      const completed = userData?.surveyTaken || false;
+      console.log('Survey completion status:', completed);
+      return completed;
     } catch (error) {
       console.error('Error checking survey completion:', error);
       return false;
@@ -41,7 +45,12 @@ class DataService {
 
   static async markSurveyCompleted() {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_COMPLETED, 'true');
+      const userData = await this.getUserData();
+      if (userData) {
+        userData.surveyTaken = true;
+        await this.setUserData(userData);
+        console.log('Survey marked as completed');
+      }
     } catch (error) {
       console.error('Error marking survey as completed:', error);
       throw error;
@@ -56,6 +65,7 @@ class DataService {
         timestamp: new Date().toISOString()
       });
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_ANSWERS, JSON.stringify(answers));
+      console.log('Survey answer saved:', answer);
 
       // Update tasks or achievements based on answer type
       if (answer.type === 'Task') {
@@ -90,6 +100,7 @@ class DataService {
         timestamp: new Date().toISOString()
       });
       await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+      console.log('Task added:', task);
     } catch (error) {
       console.error('Error adding task:', error);
       throw error;
@@ -114,6 +125,7 @@ class DataService {
         timestamp: new Date().toISOString()
       });
       await AsyncStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+      console.log('Achievement added:', achievement);
     } catch (error) {
       console.error('Error adding achievement:', error);
       throw error;
@@ -135,6 +147,7 @@ class DataService {
       const currentFootprint = await this.getWaterFootprint() || 0;
       const newFootprint = currentFootprint + value;
       await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, newFootprint.toString());
+      console.log('Water footprint updated:', { current: currentFootprint, new: newFootprint });
       return newFootprint;
     } catch (error) {
       console.error('Error updating water footprint:', error);
@@ -154,8 +167,10 @@ class DataService {
 
   static async clearAllData() {
     try {
+      console.log('Clearing all data...');
       const keys = Object.values(STORAGE_KEYS);
       await AsyncStorage.multiRemove(keys);
+      console.log('All data cleared successfully');
     } catch (error) {
       console.error('Error clearing all data:', error);
       throw error;

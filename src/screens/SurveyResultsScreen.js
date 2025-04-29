@@ -141,23 +141,25 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     return (
       <View style={styles.resultsContainer}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Your Water Footprint</Text>
-          <Text style={styles.waterFootprintValue}>{totalWaterFootprint} L</Text>
+          <Text style={styles.summaryTitle}>Initial Water Footprint</Text>
+          <Text style={styles.waterFootprintValue}>{formatWaterVolume(totalWaterFootprint)}</Text>
           <Text style={styles.summarySubtitle}>per day</Text>
         </View>
 
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Potential Monthly Savings</Text>
-          <Text style={styles.savingsValue}>{potentialMonthlySaving} L</Text>
+          <Text style={styles.savingsValue}>{formatWaterVolume(potentialMonthlySaving)}</Text>
           <Text style={styles.summarySubtitle}>if you complete all tasks</Text>
         </View>
 
         <View style={styles.statsContainer}>
           <View style={styles.statItem}>
+            <MaterialCommunityIcons name="format-list-checks" size={24} color="#2196F3" />
             <Text style={styles.statValue}>{tasks.length}</Text>
             <Text style={styles.statLabel}>Tasks</Text>
           </View>
           <View style={styles.statItem}>
+            <MaterialCommunityIcons name="trophy" size={24} color="#2196F3" />
             <Text style={styles.statValue}>{achievements.length}</Text>
             <Text style={styles.statLabel}>Achievements</Text>
           </View>
@@ -168,6 +170,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           onPress={handleStartChallenge}
         >
           <Text style={styles.startButtonText}>Start Your Water Saving Journey</Text>
+          <MaterialCommunityIcons name="arrow-right" size={24} color="#FFF" style={styles.buttonIcon} />
         </TouchableOpacity>
       </View>
     );
@@ -321,6 +324,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: '600',
+  },
+  buttonIcon: {
+    marginLeft: 8,
   },
   areasContainer: {
     marginBottom: 32,
