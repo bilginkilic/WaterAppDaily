@@ -90,17 +90,18 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
       console.log('Starting challenge for user:', user.email);
       console.log('Saving water profile:', waterProfileData);
 
-      // Save all data
-      const saveResults = await Promise.all([
-        StorageService.saveTasks(results.tasks),
-        StorageService.saveAchievements(results.achievements),
-        StorageService.saveWaterProfile(waterProfileData),
-        StorageService.saveAnswers(results.answers)
-      ]);
+      // Data already saved during survey, just update API
 
-      // Check if any save operation failed
-      if (saveResults.includes(false)) {
-        console.warn('Some data could not be saved to API but continued with local storage');
+      // Send data to API
+      try {
+        await StorageService.createInitialProfile(user.token, {
+          initialWaterprint: initialWaterFootprint,
+          answers: results.answers,
+          correctAnswersCount: results.achievements.length
+        });
+      } catch (apiError) {
+        console.warn('Failed to sync with API but continuing with local data:', apiError);
+        throw apiError;
       }
 
       // Mark survey as completed
