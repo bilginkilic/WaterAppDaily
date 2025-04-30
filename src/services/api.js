@@ -61,45 +61,80 @@ export const resetPassword = async (token, newPassword) => {
 };
 
 export const createInitialProfile = async (token, data) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
   try {
-    const response = await api.post('/waterprint/initial-profile', {
-      answers: data.answers,
-      correctAnswersCount: data.correctAnswersCount,
-      initialWaterprint: data.initialWaterprint,
-    }, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await fetch(`${BASE_URL}/waterprint/initial-profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
     });
-    return response.data; // { profileId: string, message: string }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'API request failed');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Create initial profile API error:', error.response?.data || error.message);
+    console.error('API Error - createInitialProfile:', error);
     throw error;
   }
 };
 
 export const updateWaterFootprint = async (token, data) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
   try {
-    const response = await api.post('/waterprint/update', {
-      currentWaterprint: data.currentWaterprint,
-      taskId: data.taskId,
-      waterprintReduction: data.waterprintReduction,
-    }, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await fetch(`${BASE_URL}/waterprint/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
     });
-    return response.data; // { newWaterprint: number, totalReduction: number }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'API request failed');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Update water footprint API error:', error.response?.data || error.message);
+    console.error('API Error - updateWaterFootprint:', error);
     throw error;
   }
 };
 
 export const getProgress = async (token, userId) => {
+  if (!token) {
+    throw new Error('Authentication token is required');
+  }
+
   try {
-    const response = await api.get(`/waterprint/progress/${userId}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await fetch(`${BASE_URL}/waterprint/progress/${userId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
-    return response.data; // Progress data with waterprint history
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'API request failed');
+    }
+
+    return await response.json();
   } catch (error) {
-    console.error('Get progress API error:', error.response?.data || error.message);
+    console.error('API Error - getProgress:', error);
     throw error;
   }
 };

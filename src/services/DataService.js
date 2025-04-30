@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import StorageService from './StorageService';
 
 const STORAGE_KEYS = {
   USER_DATA: '@user_data',
@@ -198,6 +199,27 @@ class DataService {
     } catch (error) {
       console.error('Error calculating potential monthly saving:', error);
       return 0;
+    }
+  }
+
+  static async createInitialProfile(data) {
+    try {
+      const userData = await this.getUserData();
+      if (!userData || !userData.token) {
+        throw new Error('User not authenticated');
+      }
+
+      // Call the API service
+      const response = await StorageService.createInitialProfile(userData.token, data);
+      
+      // Save the initial water footprint locally
+      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, data.initialWaterprint.toString());
+      
+      console.log('Initial profile created:', response);
+      return response;
+    } catch (error) {
+      console.error('Error creating initial profile:', error);
+      throw error;
     }
   }
 }
