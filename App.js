@@ -82,8 +82,8 @@ function AppContent() {
 
         // Initialize and validate tasks
         const StorageService = require('./src/services/StorageService').default;
-        await StorageService.initializeTasks();
-        await StorageService.validateAndUpdateTasks();
+       // await StorageService.initializeTasks();
+       // await StorageService.validateAndUpdateTasks();
       } catch (error) {
         console.error('Initialization error:', error);
       }

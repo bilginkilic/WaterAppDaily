@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import StorageService from './StorageService';
+//import StorageService from './StorageService';
 
 const STORAGE_KEYS = {
   USER_DATA: '@user_data',
@@ -12,6 +12,9 @@ const STORAGE_KEYS = {
 };
 
 class DataService {
+ ;
+  
+      
   static async setUserData(userData) {
     try {
       console.log('Setting user data:', userData);
@@ -211,8 +214,8 @@ class DataService {
       }
 
       // Call the API service
-      const response = await StorageService.createInitialProfile(userData.token, data);
-      
+      //const response = await StorageService.createInitialProfile(userData.token, data);
+      const response = true;
       // Save the initial water footprint locally
       await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, data.initialWaterprint.toString());
       
@@ -296,7 +299,7 @@ class DataService {
         timestamp: new Date().toISOString()
       };
       achievements.push(newAchievement);
-      await StorageService.saveAchievements(achievements);
+      //await StorageService.saveAchievements(achievements);
 
       console.log('Task converted to achievement:', newAchievement);
       return achievements;
