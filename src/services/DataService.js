@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 //import StorageService from './StorageService';
+//local storage
 
 const STORAGE_KEYS = {
   USER_DATA: '@user_data',
@@ -303,12 +304,38 @@ class DataService {
     }
   }
 
+  static async getCurrentWaterFootprint() {
+    return this.CurrentWaterFootPrint(); // Alias for consistent naming
+  }
+
+  static async saveTasks(tasks) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+      console.log('Tasks saved:', tasks);
+    } catch (error) {
+      console.error('Error saving tasks:', error);
+      throw error;
+    }
+  }
+
+  static async saveAchievements(achievements) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(achievements));
+      console.log('achievements saved:', achievements);
+    } catch (error) {
+      console.error('Error saving achievements:', achievements);
+      throw error;
+    }
+  }
+
   static async TaskToAchievements(task) {
     try {
+      console.log('Converting task to achievement:', task);
+
       // Remove from tasks
       const tasks = await this.getTasks();
       const updatedTasks = tasks.filter(t => t.questionId !== task.questionId);
-      await this.saveTasks(updatedTasks);
+      await  this.saveTasks(updatedTasks);
 
       // Add to achievements
       const achievements = await this.getAchievements();
@@ -318,9 +345,10 @@ class DataService {
         timestamp: new Date().toISOString()
       };
       achievements.push(newAchievement);
-      //await StorageService.saveAchievements(achievements);
+      await  this.saveAchievements(achievements);
 
       console.log('Task converted to achievement:', newAchievement);
+      console.log('Updated achievements:', achievements);
       return achievements;
     } catch (error) {
       console.error('Error converting task to achievement:', error);
