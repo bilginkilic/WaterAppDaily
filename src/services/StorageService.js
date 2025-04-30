@@ -17,7 +17,13 @@ class StorageService {
       }
 
       const data = await response.json();
-      await DataService.setUserData({ token: data.token, userId: data.userId, email });
+      await DataService.setUserData({ 
+        token: data.token, 
+        userId: data.userId, 
+        email,
+        isLoggedIn: true,
+        surveyTaken: false
+      });
       return data;
     } catch (error) {
       console.error('Login error:', error);

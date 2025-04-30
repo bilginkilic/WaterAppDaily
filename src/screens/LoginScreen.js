@@ -33,14 +33,6 @@ export const LoginScreen = ({ navigation }) => {
       const response = await StorageService.login(email, password);
       console.log('Login response:', response);
 
-      // Kullanıcı verilerini kaydet
-      const userData = {
-        email,
-        isLoggedIn: true,
-        surveyTaken: false // İlk girişte survey yapılmamış olarak işaretle
-      };
-      await DataService.setUserData(userData);
-
       // AuthContext'e giriş bilgilerini kaydet
       await signIn(response.token, {
         id: response.userId,

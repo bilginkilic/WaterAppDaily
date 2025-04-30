@@ -26,7 +26,7 @@ const formatWaterVolume = (liters) => {
 };
 
 export const SurveyResultsScreen = ({ route, navigation }) => {
-  const { user } = useAuth();
+  const { user, token, signOut } = useAuth();
   const { results } = route.params;
   const waterFootprint = results?.totalWaterFootprint || 0;
   const tasks = results?.tasks || [];
@@ -66,8 +66,9 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   
   const handleStartChallenge = async () => {
     try {
-      // Verify user is logged in
-      if (!user || !user.email) {
+      // Get user data including token
+      const userData = await DataService.getUserData();
+      if (!userData || !userData.email) {
         throw new Error('User not authenticated');
       }
 
@@ -87,14 +88,12 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         achievements: results.achievements
       };
 
-      console.log('Starting challenge for user:', user.email);
+      console.log('Starting challenge for user:', userData.email);
       console.log('Saving water profile:', waterProfileData);
-
-      // Data already saved during survey, just update API
 
       // Send data to API
       try {
-        await StorageService.createInitialProfile(user.token, {
+        await StorageService.createInitialProfile(userData.token, {
           initialWaterprint: initialWaterFootprint,
           answers: results.answers,
           correctAnswersCount: results.achievements.length
@@ -132,6 +131,16 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigation.replace('Login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      Alert.alert('Error', 'Failed to logout. Please try again.');
+    }
+  };
+
   const renderResults = () => {
     const { totalWaterFootprint, tasks, achievements, potentialMonthlySaving } = route.params.results;
 
@@ -166,7 +175,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           style={styles.startButton}
           onPress={handleStartChallenge}
         >
-          <Text style={styles.startButtonText}>Start Your Water Saving Journey</Text>
+          <Text style={styles.startButtonText}>Start challenge</Text>
           <MaterialCommunityIcons name="arrow-right" size={24} color="#FFF" style={styles.buttonIcon} />
         </TouchableOpacity>
       </View>
@@ -229,6 +238,14 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
             {strings.challengeInfo}
           </Text>
         </View>
+
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={handleLogout}
+        >
+          <MaterialCommunityIcons name="logout" size={24} color="#FFF" style={styles.buttonIcon} />
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -389,5 +406,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1976D2',
     lineHeight: 24,
+  },
+  logoutButton: {
+    backgroundColor: '#FF5252',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 }); 
