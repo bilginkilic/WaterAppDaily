@@ -178,74 +178,10 @@ The application uses the provided `questions` data (10 questions) with the follo
   - `Task.js`: Handles task interaction (re-ask question, video button).
   - `Profile.js`: Shows water footprint and progress.
 
-#### **Pseudo-Code**
-```javascript
-// State Management
-let state = {
-  surveyCompleted: false,
-  answers: [],
-  tasks: [],
-  achievements: [],
-  initialWaterFootprint: 0,
-  currentWaterFootprint: 0
-};
+ 
+ 
 
-// Survey Logic
-function handleSurveyAnswer(questionId, selectedOption) {
-  if (questionId === 9 && selectedOption.text === "No") {
-    skipQuestion(10);
-  }
-  state.answers.push({ questionId, selectedOption });
-  if (selectedOption.type === "Achievement") {
-    state.achievements.push({ questionId, task: selectedOption.task, valueTotal: selectedOption.valueTotal });
-  } else if (selectedOption.type === "Task") {
-    state.tasks.push({ questionId, task: selectedOption.task, valueTotal: selectedOption.valueTotal });
-  }
-  if (isSurveyComplete()) {
-    state.initialWaterFootprint = calculateWaterFootprint();
-    state.currentWaterFootprint = state.initialWaterFootprint;
-    state.surveyCompleted = true;
-    saveState();
-    syncToAPI();
-    navigateToChallenges();
-  }
-}
-
-function calculateWaterFootprint() {
-  return state.answers.reduce((total, answer) => total + answer.selectedOption.valueTotal, 0);
-}
-
-// Challenge Logic
-function handleTaskClick(task) {
-  showQuestion(task.questionId, { video: questions[task.questionId - 1].content.video });
-  onAnswerSelect(newOption => {
-    if (newOption.type === "Achievement") {
-      updateAnswer(task.questionId, newOption);
-      state.tasks = state.tasks.filter(t => t.questionId !== task.questionId);
-      state.achievements.push({ questionId: task.questionId, task: newOption.task, valueTotal: newOption.valueTotal });
-      state.currentWaterFootprint = calculateWaterFootprint();
-      saveState();
-      syncToAPI();
-    }
-  });
-}
-
-// Persistence
-function loadState() {
-  if (state.surveyCompleted) {
-    navigateToChallenges();
-  } else {
-    navigateToSurvey();
-  }
-}
-
-// Notifications
-function scheduleNotifications() {
-  if (state.tasks.length > 0) {
-    scheduleNotification("8:00 AM", "Complete a task to reduce your water footprint!");
-    scheduleNotification("8:00 PM", "Complete a task to reduce your water footprint!");
-  }
-}
+ 
 ```
 
 #### **UI Components**

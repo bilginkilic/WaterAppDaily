@@ -179,12 +179,10 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
           timestamp: new Date().toISOString(),
           category: currentQuestion.category
         });
-// Get updated data
 
-const waterFootprint = await DataService.getCurrentWaterFootprint();
+        const waterFootprint = await DataService.getCurrentWaterFootprint();
         // API'yi güncelle
         try {
-          
           await StorageService.updateWaterprint({
             currentWaterprint: waterFootprint,
             taskId: currentQuestion.task.questionId,
@@ -193,18 +191,14 @@ const waterFootprint = await DataService.getCurrentWaterFootprint();
         } catch (apiError) {
           console.warn('Failed to sync with API but continuing with local data:', apiError);
         }
-       
-      
 
-      
-
-      // Update parent component
-      onTasksUpdate({
-        tasks: updatedTasks,
-        achievements: updatedAchievements,
-        waterFootprint
-      });
-    }
+        // Update parent component
+        onTasksUpdate({
+          tasks: await DataService.getTasks(),
+          achievements: await DataService.getAchievements(),
+          waterFootprint: await DataService.getCurrentWaterFootprint()
+        });
+      }
 
       // Close modal
       setShowQuestionModal(false);
