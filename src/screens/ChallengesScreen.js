@@ -109,6 +109,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
         ...question,
         task
       });
+      setShowQuestionModal(true);
     }
   };
 
@@ -163,13 +164,42 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
     setIsLoading(true);
 
     try {
-      // Save the new answer
-      await DataService.saveSurveyAnswer(currentQuestion.task.questionId, selectedOption);
+      console.log('Selected option:', selectedOption);
+      console.log('Current task:', currentQuestion.task);
+
+      if (selectedOption.type === 'Achievement') {
+        // Task'ı Achievement'a dönüştür
+        console.log('Converting task to achievement...');
+        await DataService.TaskToAchievements({
+          questionId: currentQuestion.task.questionId,
+          answer: selectedOption.text,
+          valueTotal: selectedOption.valueTotal,
+          type: selectedOption.type,
+          valueSaving: selectedOption.valueSaving,
+          timestamp: new Date().toISOString(),
+          category: currentQuestion.category
+        });
+
+        // API'yi güncelle
+        try {
+          const waterFootprint = await DataService.getCurrentWaterFootprint();
+          await StorageService.updateWaterprint({
+            currentWaterprint: waterFootprint,
+            taskId: currentQuestion.task.questionId,
+            waterprintReduction: selectedOption.valueSaving
+          });
+        } catch (apiError) {
+          console.warn('Failed to sync with API but continuing with local data:', apiError);
+        }
+      } else {
+        // Sadece yeni cevabı kaydet
+        await DataService.saveSurveyAnswer(currentQuestion.task.questionId, selectedOption);
+      }
 
       // Get updated data
       const updatedTasks = await DataService.getTasks();
       const updatedAchievements = await DataService.getAchievements();
-      const waterFootprint = await DataService.getWaterFootprint();
+      const waterFootprint = await DataService.getCurrentWaterFootprint();
 
       // Update parent component
       onTasksUpdate({
@@ -179,9 +209,11 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
       });
 
       // Close modal
+      setShowQuestionModal(false);
       setCurrentQuestion(null);
     } catch (error) {
       console.error('Error handling task response:', error);
+      Alert.alert(strings.error, 'Failed to update task status');
     } finally {
       setIsLoading(false);
     }
