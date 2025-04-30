@@ -12,7 +12,7 @@ import {
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
+import StorageService from '../services/StorageService';
 
 export const LoginScreen = ({ navigation }) => {
   const { signIn } = useAuth();
@@ -29,8 +29,8 @@ export const LoginScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // API üzerinden giriş yap
-      const response = await api.login(email, password);
+      // StorageService üzerinden giriş yap
+      const response = await StorageService.login(email, password);
       console.log('Login response:', response);
 
       // Kullanıcı verilerini kaydet
@@ -65,7 +65,7 @@ export const LoginScreen = ({ navigation }) => {
       console.error('Login error:', error);
       Alert.alert(
         'Login Failed',
-        error.response?.data?.message || 'Please check your credentials and try again.'
+        error.message || 'Please check your credentials and try again.'
       );
     } finally {
       setIsLoading(false);
