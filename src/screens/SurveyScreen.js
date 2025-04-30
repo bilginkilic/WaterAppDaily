@@ -126,8 +126,8 @@ export const SurveyScreen = ({ navigation }) => {
 
   useEffect(() => {
     const initializeSurvey = async () => {
-      // Clear all previous results
-      await DataService.clearAllData();
+      // Clear only survey-related data
+      await DataService.clearSurveyData();
       
       // Reset all state
       setCurrentQuestion(0);

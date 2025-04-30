@@ -182,6 +182,25 @@ class DataService {
     }
   }
 
+  static async clearSurveyData() {
+    try {
+      console.log('Clearing survey data...');
+      const keysToRemove = [
+        STORAGE_KEYS.SURVEY_ANSWERS,
+        STORAGE_KEYS.TASKS,
+        STORAGE_KEYS.ACHIEVEMENTS,
+        STORAGE_KEYS.SURVEY_COMPLETED,
+        STORAGE_KEYS.WATER_FOOTPRINT,
+        STORAGE_KEYS.SURVEY_ANSWERS_INIT
+      ];
+      await AsyncStorage.multiRemove(keysToRemove);
+      console.log('Survey data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing survey data:', error);
+      throw error;
+    }
+  }
+
   static async calculatePotentialMonthlySaving() {
     try {
       const tasks = await this.getTasks();
