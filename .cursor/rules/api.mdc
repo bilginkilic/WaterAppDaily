@@ -8,7 +8,7 @@ alwaysApply: true
 
 -aşağıdaki endpointler kullanılıyor ve olmalıdır.
 
-
+src/services/StorageService.js burada bu operasyonlar yurutulur. bu dosya bu amacla olusturuldu
 # Your rule content
 
 - You can @ files here
