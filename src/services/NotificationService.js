@@ -1,5 +1,6 @@
 import PushNotification, { Importance } from 'react-native-push-notification';
 import { Platform } from 'react-native';
+import DataService from './DataService';
 
 class NotificationService {
   constructor() {
@@ -43,34 +44,52 @@ class NotificationService {
     );
   }
 
-  scheduleReminderNotification(hour = 10, minute = 0) {
-    PushNotification.localNotificationSchedule({
-      channelId: 'water-save-reminders',
-      title: "Time to Save Water! 💧",
-      message: "Check your daily water-saving challenges and make a difference!",
-      date: this.getNextNotificationDate(hour, minute),
-      allowWhileIdle: true,
-      repeatType: 'day',
-    });
+  async scheduleReminderNotification(hour = 10, minute = 0) {
+    try {
+      const tasks = await DataService.getTasks();
+      if (tasks && tasks.length > 0) {
+        PushNotification.localNotificationSchedule({
+          channelId: 'water-save-reminders',
+          title: "Time to Save Water! 💧",
+          message: `You have ${tasks.length} water-saving challenges waiting for you!`,
+          date: this.getNextNotificationDate(hour, minute),
+          allowWhileIdle: true
+        });
+        console.log('Morning reminder scheduled for', tasks.length, 'tasks');
+      } else {
+        console.log('No tasks available, skipping morning reminder');
+      }
+    } catch (error) {
+      console.error('Error scheduling reminder notification:', error);
+    }
   }
 
-  scheduleMotivationalNotification(hour = 18, minute = 0) {
-    const motivationalMessages = [
-      "Every drop counts! Keep up the good work! 🌊",
-      "You're making a difference with every water-saving action! 💪",
-      "Your efforts are helping our planet! 🌍",
-      "Small changes lead to big impacts! Keep going! ⭐",
-      "You're a water-saving champion! 🏆",
-    ];
+  async scheduleMotivationalNotification(hour = 18, minute = 0) {
+    try {
+      const tasks = await DataService.getTasks();
+      if (tasks && tasks.length > 0) {
+        const motivationalMessages = [
+          "Every drop counts! Keep up the good work! 🌊",
+          "You're making a difference with every water-saving action! 💪",
+          "Your efforts are helping our planet! 🌍",
+          "Small changes lead to big impacts! Keep going! ⭐",
+          "You're a water-saving champion! 🏆",
+        ];
 
-    PushNotification.localNotificationSchedule({
-      channelId: 'water-save-reminders',
-      title: "Water Saving Progress",
-      message: motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)],
-      date: this.getNextNotificationDate(hour, minute),
-      allowWhileIdle: true,
-      repeatType: 'day',
-    });
+        PushNotification.localNotificationSchedule({
+          channelId: 'water-save-reminders',
+          title: "Water Saving Progress",
+          message: `${motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)]} You have ${tasks.length} challenges remaining.`,
+          date: this.getNextNotificationDate(hour, minute),
+          allowWhileIdle: true
+        });
+        console.log('Evening reminder scheduled for', tasks.length, 'tasks');
+      } else {
+        console.log('No tasks available, skipping evening reminder');
+      }
+    } catch (error) {
+      console.error('Error scheduling motivational notification:', error);
+    }
   }
 
   scheduleChallengeReminder(remainingChallenges) {
