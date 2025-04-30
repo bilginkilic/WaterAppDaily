@@ -112,12 +112,11 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
     }
   };
 
-  const handleWatchVideo = (categoryId) => {
+  const handleWatchVideo = (questionId) => {
     try {
-      const videoData = getTutorialVideo(categoryId);
+      const videoData = getTutorialVideo(questionId);
       console.log('Video data:', videoData);
       
-      // Önce TutorialService'ten videoyu al
       if (videoData && videoData.url) {
         console.log('Video URL:', videoData.url);
         
@@ -150,42 +149,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
           Alert.alert(strings.error, strings.videoLoadError);
         });
       } else {
-        // TutorialService'te video yoksa, doğrudan questions.js'ten al
-        const question = questions.find(q => q.category === categoryId);
-        if (question && question.content && question.content.video) {
-          console.log('Fallback question video URL:', question.content.video);
-          
-          // Doğrudan YouTube'u açmak için Linking kullan
-          Linking.canOpenURL(question.content.video).then(supported => {
-            if (supported) {
-              Linking.openURL(question.content.video);
-            } else {
-              console.log('Cannot open URL: ' + question.content.video);
-              Alert.alert(
-                'Video Player',
-                'Cannot open the video URL. Would you like to copy it to clipboard?',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel'
-                  },
-                  {
-                    text: 'Copy URL',
-                    onPress: () => {
-                      Clipboard.setString(question.content.video);
-                      Alert.alert('URL Copied', 'Video URL has been copied to clipboard');
-                    }
-                  }
-                ]
-              );
-            }
-          }).catch(err => {
-            console.error('Error opening URL:', err);
-            Alert.alert(strings.error, strings.videoLoadError);
-          });
-        } else {
-          Alert.alert(strings.error, strings.videoLoadError);
-        }
+        Alert.alert(strings.error, strings.videoLoadError);
       }
     } catch (error) {
       console.error('Error loading video:', error);
@@ -251,7 +215,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
               {/* Video tutorial button */}
               <TouchableOpacity 
                 style={styles.watchVideoButton}
-                onPress={() => handleWatchVideo(currentQuestion.category)}
+                onPress={() => handleWatchVideo(currentQuestion.id)}
               >
                 <MaterialIcons name="ondemand-video" size={20} color="#FFFFFF" />
                 <Text style={styles.watchVideoText}>{strings.watchTutorial}</Text>
