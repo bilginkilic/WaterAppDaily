@@ -379,11 +379,12 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
   };
 
   const getTaskDescription = (task) => {
+    //console.log('Task:', task);
     const category = categories[task.category];
     const categoryName = category ? category.title : task.category;
     
     // Find the original question
-    const question = questions.find(q => q.id === task.id);
+    const question = questions.find(q => q.id === task.questionId);
     if (!question) return task.description || 'Complete this task to reduce your water footprint.';
 
     // Get the task option (the one with type 'Task')
@@ -405,9 +406,9 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.challengeHeader}>
-        <Text style={styles.challengeTitle}>Water-Saving</Text>
+        <Text style={styles.challengeTitle}>Your Challenges</Text>
         <Text style={styles.challengeSubtitle}>
-          Complete these challenges to reduce your water footprint. Watch the educational videos and make sustainable choices to earn achievements.
+          Complete these challenges to reduce your water footprint. Watch the educational videos and make sustainable choices to earn achievements. Aiming to transform your habits and save water.
         </Text>
       </View>
 
@@ -488,7 +489,7 @@ const AchievementsScreen = ({ achievements }) => {
   };
 
   const getAchievementDescription = (achievement) => {
-    const question = questions.find(q => q.id === achievement.id);
+    const question = questions.find(q => q.id === achievement.questionId);
     if (!question) return achievement.message;
 
     const achievementOption = question.options.find(opt => opt.type === 'Achievement');
@@ -520,7 +521,7 @@ const AchievementsScreen = ({ achievements }) => {
                   </Text>
                   <View style={styles.achievementFooter}>
                     <Text style={styles.achievementDate}>
-                      {new Date(achievement.date).toLocaleDateString()}
+                      {new Date(achievement.timestamp).toLocaleDateString()}
                     </Text>
                     
                   </View>
