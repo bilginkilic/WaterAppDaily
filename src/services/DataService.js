@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   TASKS: '@tasks',
   ACHIEVEMENTS: '@achievements',
   SURVEY_COMPLETED: '@survey_completed',
-  WATER_FOOTPRINT: '@water_footprint'
+  WATER_FOOTPRINT: '@water_footprint',
+  SURVEY_ANSWERS_INIT: '@survey_answers_init'
 };
 
 class DataService {
@@ -219,6 +220,105 @@ class DataService {
       return response;
     } catch (error) {
       console.error('Error creating initial profile:', error);
+      throw error;
+    }
+  }
+
+  static async saveSurveyAnswersInit(answer) {
+    try {
+      const answers = await this.getSurveyAnswersInit() || [];
+      answers.push({
+        ...answer,
+        timestamp: new Date().toISOString()
+      });
+      await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_ANSWERS_INIT, JSON.stringify(answers));
+      console.log('Survey answer init saved:', answer);
+    } catch (error) {
+      console.error('Error saving survey answer init:', error);
+      throw error;
+    }
+  }
+
+  static async getSurveyAnswersInit() {
+    try {
+      const answers = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_ANSWERS_INIT);
+      return answers ? JSON.parse(answers) : [];
+    } catch (error) {
+      console.error('Error getting survey answers init:', error);
+      throw error;
+    }
+  }
+
+  static async InitialWaterFootPrint() {
+    try {
+      const answers = await this.getSurveyAnswersInit();
+      const totalWaterFootprint = answers.reduce((sum, answer) => {
+        return sum + (answer.valueTotal || 0);
+      }, 0);
+      console.log('Initial water footprint calculated:', totalWaterFootprint);
+      return totalWaterFootprint;
+    } catch (error) {
+      console.error('Error calculating initial water footprint:', error);
+      return 0;
+    }
+  }
+
+  static async CurrentWaterFootPrint() {
+    try {
+      const tasks = await this.getTasks();
+      const achievements = await this.getAchievements();
+      const allItems = [...tasks, ...achievements];
+      
+      const currentWaterFootprint = allItems.reduce((sum, item) => {
+        return sum + (item.valueTotal || 0);
+      }, 0);
+      
+      console.log('Current water footprint calculated:', currentWaterFootprint);
+      return currentWaterFootprint;
+    } catch (error) {
+      console.error('Error calculating current water footprint:', error);
+      return 0;
+    }
+  }
+
+  static async TaskToAchievements(task) {
+    try {
+      // Remove from tasks
+      const tasks = await this.getTasks();
+      const updatedTasks = tasks.filter(t => t.questionId !== task.questionId);
+      await this.saveTasks(updatedTasks);
+
+      // Add to achievements
+      const achievements = await this.getAchievements();
+      const newAchievement = {
+        ...task,
+        type: 'Achievement',
+        timestamp: new Date().toISOString()
+      };
+      achievements.push(newAchievement);
+      await StorageService.saveAchievements(achievements);
+
+      console.log('Task converted to achievement:', newAchievement);
+      return achievements;
+    } catch (error) {
+      console.error('Error converting task to achievement:', error);
+      throw error;
+    }
+  }
+
+  static async TakeChallenge() {
+    try {
+      const tasks = await this.getTasks();
+      const achievements = await this.getAchievements();
+      const waterFootprint = await this.CurrentWaterFootPrint();
+      
+      return {
+        tasks,
+        achievements,
+        waterFootprint
+      };
+    } catch (error) {
+      console.error('Error taking challenge:', error);
       throw error;
     }
   }

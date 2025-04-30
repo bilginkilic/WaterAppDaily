@@ -71,16 +71,17 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         throw new Error('User not authenticated');
       }
 
-      // Calculate initial water footprint from answers
-      const answers = results?.answers || [];
-      const initialWaterFootprint = answers.reduce((total, answer) => {
-        return total + (answer.waterprintValue || 0);
-      }, 0);
+      // Use the total water footprint from survey results
+      const initialWaterFootprint = results.totalWaterFootprint;
+      console.log('Initial water footprint:', initialWaterFootprint);
 
-      // Create water profile object with calculated values
+      // Create water profile object with correct values
       const waterProfileData = {
         initialWaterprint: initialWaterFootprint,
-        dailyUsage: initialWaterFootprint,
+        currentWaterprint: initialWaterFootprint,
+        waterprintReduction: 0,
+        previousUsage: initialWaterFootprint,
+        additionalUsage: 0,
         lastUpdated: new Date().toISOString(),
         tasks: results.tasks,
         achievements: results.achievements
@@ -94,7 +95,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         StorageService.saveTasks(results.tasks),
         StorageService.saveAchievements(results.achievements),
         StorageService.saveWaterProfile(waterProfileData),
-        StorageService.saveAnswers(answers)
+        StorageService.saveAnswers(results.answers)
       ]);
 
       // Check if any save operation failed
@@ -107,12 +108,12 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
 
       // Navigate to challenges screen
       console.log('Starting challenges with params:', { 
-        improvementAreas: [], 
+        improvementAreas, 
         waterProfile: waterProfileData 
       });
       
       navigation.replace('Challenges', {
-        improvementAreas: [],
+        improvementAreas,
         waterProfile: waterProfileData
       });
     } catch (error) {

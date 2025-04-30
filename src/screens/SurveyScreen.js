@@ -44,23 +44,29 @@ export const SurveyScreen = ({ navigation }) => {
     });
 
     try {
-      // Save the answer using DataService (this will also handle Task/Achievement addition)
+      // Save initial survey answer
+      await DataService.saveSurveyAnswersInit(answer);
+      
+      // Also save to regular survey answers for backward compatibility
       await DataService.saveSurveyAnswer(answer);
 
+      // Calculate initial water footprint
+      const initialWaterFootprint = await DataService.InitialWaterFootPrint();
+      console.log('Current Initial Water Footprint:', initialWaterFootprint);
+
       // Get updated data
-      const waterFootprint = await DataService.getWaterFootprint();
       const tasks = await DataService.getTasks();
       const achievements = await DataService.getAchievements();
 
       console.log('\nCurrent Survey Status:');
-      console.log('Total Water Footprint:', waterFootprint, 'L');
+      console.log('Initial Water Footprint:', initialWaterFootprint, 'L');
       console.log('Total Tasks:', tasks.length);
       console.log('Total Achievements:', achievements.length);
       console.log('Question Progress:', `${currentQuestion + 1}/${questions.length}`);
 
       // Update state with new results
       setSurveyResults({
-        totalWaterFootprint: waterFootprint,
+        totalWaterFootprint: initialWaterFootprint,
         tasks,
         achievements
       });
@@ -83,17 +89,17 @@ export const SurveyScreen = ({ navigation }) => {
 
   const handleSurveyComplete = async () => {
     try {
-      // Get all current data
-      const currentWaterFootprint = await DataService.getWaterFootprint();
+      // Get initial water footprint from survey answers init
+      const initialWaterFootprint = await DataService.InitialWaterFootPrint();
       const currentTasks = await DataService.getTasks();
       const currentAchievements = await DataService.getAchievements();
-      const currentAnswers = await DataService.getSurveyAnswers();
+      const currentAnswers = await DataService.getSurveyAnswersInit();
       
       // Calculate potential monthly saving
       const potentialMonthlySaving = await DataService.calculatePotentialMonthlySaving();
 
       console.log('Survey Completion Data:', {
-        waterFootprint: currentWaterFootprint,
+        initialWaterFootprint,
         tasks: currentTasks,
         achievements: currentAchievements,
         potentialMonthlySaving
@@ -105,7 +111,7 @@ export const SurveyScreen = ({ navigation }) => {
       // Navigate to results screen with all data
       navigation.replace('SurveyResults', {
         results: {
-          totalWaterFootprint: currentWaterFootprint,
+          totalWaterFootprint: initialWaterFootprint,
           tasks: currentTasks,
           achievements: currentAchievements,
           answers: currentAnswers,
