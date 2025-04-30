@@ -12,6 +12,7 @@ import DataService from '../services/DataService';
 
 export const ProfileScreen = () => {
   const [waterFootprint, setWaterFootprint] = useState(0);
+  const [initialWaterFootprint, setInitialWaterFootprint] = useState(0);
   const [tasks, setTasks] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,13 +20,15 @@ export const ProfileScreen = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [footprint, tasksData, achievementsData] = await Promise.all([
-          DataService.getWaterFootprint(),
+        const [currentFootprint, initialFootprint, tasksData, achievementsData] = await Promise.all([
+          DataService.getCurrentWaterFootprint(),
+          DataService.InitialWaterFootPrint(),
           DataService.getTasks(),
           DataService.getAchievements()
         ]);
 
-        setWaterFootprint(footprint);
+        setWaterFootprint(currentFootprint);
+        setInitialWaterFootprint(initialFootprint);
         setTasks(tasksData);
         setAchievements(achievementsData);
       } catch (error) {
@@ -47,14 +50,13 @@ export const ProfileScreen = () => {
   }
 
   const totalPotentialSaving = tasks.reduce((total, task) => total + (task.valueSaving || 0), 0);
-  const totalWaterSaved = achievements.reduce((total, achievement) => total + (achievement.valueSaving || 0), 0);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
         <View style={styles.content}>
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Your Water Footprint</Text>
+            <Text style={styles.summaryTitle}>Current Water Footprint</Text>
             <Text style={styles.waterFootprint}>{waterFootprint}L</Text>
             
             <View style={styles.savingContainer}>
@@ -64,9 +66,9 @@ export const ProfileScreen = () => {
             </View>
 
             <View style={styles.savingContainer}>
-              <Text style={styles.savingTitle}>Total Water Saved</Text>
-              <Text style={styles.savingAmount}>{totalWaterSaved}L</Text>
-              <Text style={styles.savingNote}>From completed achievements</Text>
+              <Text style={styles.savingTitle}>Initial Water Footprint</Text>
+              <Text style={styles.savingAmount}>{initialWaterFootprint}L</Text>
+              <Text style={styles.savingNote}>Your starting water footprint</Text>
             </View>
           </View>
 
