@@ -190,6 +190,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
           });
         } catch (apiError) {
           console.warn('Failed to sync with API but continuing with local data:', apiError);
+          throw apiError;
         }
 
         // Update parent component

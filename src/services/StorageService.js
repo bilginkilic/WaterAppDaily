@@ -143,6 +143,40 @@ class StorageService {
       throw error;
     }
   }
+
+  static async updateWaterprint({ currentWaterprint, taskId, waterprintReduction }) {
+    try {
+      const userData = await DataService.getUserData();
+      if (!userData?.token) {
+        throw new Error('No token found');
+      }
+
+      const response = await fetch(`${API_URL}/waterprint/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`
+        },
+        body: JSON.stringify({
+          currentWaterprint,
+          taskId,
+          waterprintReduction
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update waterprint');
+      }
+
+      const data = await response.json();
+      console.log('Waterprint update successful:', data);
+      return data;
+    } catch (error) {
+      console.error('Error updating waterprint:', error);
+      throw error;
+    }
+  }
 }
 
 export default StorageService; 
