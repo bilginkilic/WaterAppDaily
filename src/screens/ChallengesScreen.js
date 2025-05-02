@@ -168,37 +168,72 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
       console.log('Current task:', currentQuestion.task);
 
       if (selectedOption.type === 'Achievement') {
-        // Task'ı Achievement'a dönüştür
-        console.log('Converting task to achievement...');
-        await DataService.TaskToAchievements({
-          questionId: currentQuestion.task.questionId,
-          answer: selectedOption.text,
-          valueTotal: selectedOption.valueTotal,
-          type: selectedOption.type,
-          valueSaving: selectedOption.valueSaving,
-          timestamp: new Date().toISOString(),
-          category: currentQuestion.category
-        });
+        let localUpdateSuccessful = false;
+        let originalData = null;
 
-        const waterFootprint = await DataService.getCurrentWaterFootprint();
-        // API'yi güncelle
         try {
+          // Store original data for rollback
+          originalData = {
+            tasks: await DataService.getTasks(),
+            achievements: await DataService.getAchievements(),
+            waterFootprint: await DataService.getCurrentWaterFootprint()
+          };
+
+          // Local update
+          await DataService.TaskToAchievements({
+            questionId: currentQuestion.task.questionId,
+            answer: selectedOption.text,
+            valueTotal: selectedOption.valueTotal,
+            type: selectedOption.type,
+            valueSaving: selectedOption.valueSaving,
+            timestamp: new Date().toISOString(),
+            category: currentQuestion.category
+          });
+
+          localUpdateSuccessful = true;
+
+          const waterFootprint = await DataService.getCurrentWaterFootprint();
+          
+          // API update
           await StorageService.updateWaterprint({
             currentWaterprint: waterFootprint,
             taskId: currentQuestion.task.questionId,
             waterprintReduction: selectedOption.valueSaving
           });
-        } catch (apiError) {
-          console.warn('Failed to sync with API but continuing with local data:', apiError);
-          throw apiError;
-        }
 
-        // Update parent component
-        onTasksUpdate({
-          tasks: await DataService.getTasks(),
-          achievements: await DataService.getAchievements(),
-          waterFootprint: await DataService.getCurrentWaterFootprint()
-        });
+          // Update parent component
+          onTasksUpdate({
+            tasks: await DataService.getTasks(),
+            achievements: await DataService.getAchievements(),
+            waterFootprint: await DataService.getCurrentWaterFootprint()
+          });
+        } catch (error) {
+          console.error('Error in task update:', error);
+
+          // Rollback if local update was successful but API failed
+          if (localUpdateSuccessful && originalData) {
+            try {
+              // Restore original data
+              await DataService.restoreData(originalData);
+              Alert.alert(
+                'Error',
+                'Failed to sync with server. Changes have been reverted.',
+                [{ text: 'OK' }]
+              );
+            } catch (rollbackError) {
+              console.error('Rollback failed:', rollbackError);
+              Alert.alert(
+                'Error',
+                'Failed to sync with server and rollback failed. Please try again later.',
+                [{ text: 'OK' }]
+              );
+            }
+            return;
+          }
+
+          Alert.alert('Error', 'Failed to update task status');
+          return;
+        }
       }
 
       // Close modal
@@ -206,7 +241,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
       setCurrentQuestion(null);
     } catch (error) {
       console.error('Error handling task response:', error);
-      Alert.alert(strings.error, 'Failed to update task status');
+      Alert.alert('Error', 'Failed to update task status');
     } finally {
       setIsLoading(false);
     }
@@ -228,7 +263,8 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
               <Text style={styles.modalTitle}>{strings.challengeTitle}</Text>
               <TouchableOpacity
                 style={styles.closeModalButton}
-                onPress={() => setShowQuestionModal(false)}
+                onPress={() => !isLoading && setShowQuestionModal(false)}
+                disabled={isLoading}
               >
                 <MaterialCommunityIcons name="close" size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -241,6 +277,7 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
               <TouchableOpacity 
                 style={styles.watchVideoButton}
                 onPress={() => handleWatchVideo(currentQuestion.id)}
+                disabled={isLoading}
               >
                 <MaterialIcons name="ondemand-video" size={20} color="#FFFFFF" />
                 <Text style={styles.watchVideoText}>{strings.watchTutorial}</Text>
@@ -257,9 +294,11 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
                     key={index}
                     style={[
                       styles.optionButton,
-                      option.type === 'Achievement' && styles.achievementOption
+                      option.type === 'Achievement' && styles.achievementOption,
+                      isLoading && styles.disabledButton
                     ]}
                     onPress={() => handleModalResponse(option)}
+                    disabled={isLoading}
                   >
                     <Text style={styles.optionText}>{option.text}</Text>
                     {option.type === 'Achievement' && (
@@ -271,6 +310,13 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {isLoading && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator size="large" color="#2196F3" />
+                  <Text style={styles.loadingText}>Updating your progress...</Text>
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1006,6 +1052,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   selectedSegmentText: {
+    color: '#2196F3',
+    fontWeight: '600',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
     color: '#2196F3',
     fontWeight: '600',
   },
