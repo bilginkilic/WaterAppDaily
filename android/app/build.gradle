@@ -92,17 +92,28 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            storeFile file('waterapp-release.keystore')
+            storePassword 'waterapp123'
+            keyAlias 'waterapp-alias'
+            keyPassword 'waterapp123'
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+        }
+    }
+
+    configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.13.1'
+            exclude group: 'com.android.support'
         }
     }
 }
@@ -116,4 +127,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    implementation "androidx.core:core:1.13.1"
 }

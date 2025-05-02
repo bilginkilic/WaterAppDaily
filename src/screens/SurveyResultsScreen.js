@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import strings from '../localization/strings';
 import { categories } from '../data/categories';
@@ -64,7 +66,28 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   console.log('Potential Saving:', potentialSaving);
   console.log('Improvement Areas:', improvementAreas);
   
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingSteps = [
+    "Preparing your water profile...",
+    "Calculating your challenges...",
+    "Setting up your achievements...",
+    "Finalizing your personalized plan..."
+  ];
+
+  useEffect(() => {
+    let stepInterval;
+    if (isLoading) {
+      stepInterval = setInterval(() => {
+        setLoadingStep((prev) => (prev + 1) % loadingSteps.length);
+      }, 2000);
+    }
+    return () => clearInterval(stepInterval);
+  }, [isLoading]);
+
   const handleStartChallenge = async () => {
+    setIsLoading(true);
     try {
       // Get user data including token
       const userData = await DataService.getUserData();
@@ -128,6 +151,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           }
         ]
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -179,6 +204,38 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           <MaterialCommunityIcons name="arrow-right" size={24} color="#FFF" style={styles.buttonIcon} />
         </TouchableOpacity>
       </View>
+    );
+  };
+
+  const renderLoadingModal = () => {
+    return (
+      <Modal
+        visible={isLoading}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.loadingModalContainer}>
+          <View style={styles.loadingContent}>
+            <View style={styles.loadingIconContainer}>
+              <MaterialCommunityIcons name="water" size={50} color="#2196F3" style={styles.waterIcon} />
+              <ActivityIndicator size="large" color="#2196F3" style={styles.loadingIndicator} />
+            </View>
+            <Text style={styles.loadingTitle}>Setting Up Your Challenge</Text>
+            <Text style={styles.loadingStep}>{loadingSteps[loadingStep]}</Text>
+            <View style={styles.progressDots}>
+              {loadingSteps.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.progressDot,
+                    loadingStep === index && styles.activeDot
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     );
   };
 
@@ -247,6 +304,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+      {renderLoadingModal()}
     </SafeAreaView>
   );
 };
@@ -422,5 +480,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContent: {
+    backgroundColor: '#FFFFFF',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    width: width * 0.85,
+  },
+  loadingIconContainer: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  waterIcon: {
+    position: 'absolute',
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    transform: [{ scale: 1.5 }],
+  },
+  loadingTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  loadingStep: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  progressDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E0E0E0',
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: '#2196F3',
+    transform: [{ scale: 1.2 }],
   },
 }); 
