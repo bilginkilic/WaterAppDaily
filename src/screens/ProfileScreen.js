@@ -6,11 +6,16 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
+import { useAuth } from '../context/AuthContext';
+import StorageService from '../services/StorageService';
 
-export const ProfileScreen = () => {
+export const ProfileScreen = ({ navigation }) => {
+  const { signOut: authSignOut } = useAuth();
   const [waterFootprint, setWaterFootprint] = useState(0);
   const [initialWaterFootprint, setInitialWaterFootprint] = useState(0);
   const [tasks, setTasks] = useState([]);
@@ -51,6 +56,48 @@ export const ProfileScreen = () => {
 
   const totalPotentialSaving = tasks.reduce((total, task) => total + (task.valueSaving || 0), 0);
 
+  const handleSignOut = async () => {
+    try {
+      await authSignOut();
+      await DataService.clearUserData();
+      navigation.replace('Login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      strings.deleteAccountConfirmTitle,
+      strings.deleteAccountConfirmMessage,
+      [
+        {
+          text: strings.cancel,
+          style: 'cancel',
+        },
+        {
+          text: strings.confirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const userData = await DataService.getUserData();
+              if (userData?.userId) {
+                await StorageService.deleteAccount(userData.userId);
+                await DataService.clearUserData();
+                await authSignOut();
+                navigation.replace('Login');
+              }
+            } catch (error) {
+              console.error('Error deleting account:', error);
+              Alert.alert('Error', 'Failed to delete account. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView>
@@ -81,6 +128,22 @@ export const ProfileScreen = () => {
               <Text style={styles.statNumber}>{achievements.length}</Text>
               <Text style={styles.statLabel}>Achievements</Text>
             </View>
+          </View>
+
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+            >
+              <Text style={styles.signOutButtonText}>{strings.signOut}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.deleteAccountButton}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={styles.deleteAccountButtonText}>{strings.deleteAccount}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -178,5 +241,33 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 14,
     color: '#666',
+  },
+  buttonContainer: {
+    marginTop: 24,
+    gap: 16,
+  },
+  signOutButton: {
+    backgroundColor: '#2196F3',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  signOutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteAccountButton: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DC3545',
+  },
+  deleteAccountButtonText: {
+    color: '#DC3545',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

@@ -10,48 +10,58 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import strings from '../localization/strings';
-import DataService from '../services/DataService';
-import { useAuth } from '../context/AuthContext';
 import StorageService from '../services/StorageService';
+import { useAuth } from '../context/AuthContext';
 
-export const LoginScreen = ({ navigation }) => {
+export const RegisterScreen = ({ navigation }) => {
   const { signIn } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+  const handleRegister = async () => {
+    if (!email || !password || !name) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // StorageService üzerinden giriş yap
-      const response = await StorageService.login(email, password);
-      console.log('Login response:', response);
+      // Register the user
+      const response = await StorageService.register(email, password, name);
+      console.log('Registration response:', response);
 
-      // AuthContext'e giriş bilgilerini kaydet
-      await signIn(response.token, {
-        id: response.userId,
+      // Automatically log in after successful registration
+      const loginResponse = await StorageService.login(email, password);
+
+      // Set auth context
+      await signIn(loginResponse.token, {
+        id: loginResponse.userId,
         email: email,
-        name: response.name || email.split('@')[0]
+        name: name
       });
 
-      // Kullanıcının survey durumunu kontrol et
-      const existingUserData = await DataService.getUserData();
-      const isSurveyTaken = existingUserData?.surveyTaken || false;
-      
-      // After successful login, AppStack will automatically show the appropriate screen
-      console.log('Login successful, survey status:', isSurveyTaken);
+      // After successful registration and login, AppStack will automatically show Intro screen
     } catch (error) {
-      console.error('Login error:', error);
-      Alert.alert(
-        'Login Failed',
-        error.message || 'Please check your credentials and try again.'
-      );
+      console.error('Registration error:', error);
+      if (error.message.includes('already exists')) {
+        Alert.alert(
+          'Registration Failed',
+          'This email is already registered. Please use a different email address or login with your existing account.'
+        );
+      } else {
+        Alert.alert(
+          'Registration Failed',
+          error.message || 'Please check your information and try again.'
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -60,10 +70,17 @@ export const LoginScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>{strings.welcome}</Text>
-        <Text style={styles.subtitle}>{strings.slogan}</Text>
+        <Text style={styles.title}>{strings.createAccount}</Text>
+        <Text style={styles.subtitle}>{strings.registerSubtitle}</Text>
 
         <View style={styles.form}>
+          <TextInput
+            style={styles.input}
+            placeholder={strings.name}
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+          />
           <TextInput
             style={styles.input}
             placeholder={strings.email}
@@ -81,29 +98,22 @@ export const LoginScreen = ({ navigation }) => {
           />
 
           <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={handleLogin}
+            style={styles.registerButton}
+            onPress={handleRegister}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.loginButtonText}>{strings.login}</Text>
+              <Text style={styles.registerButtonText}>{strings.register}</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.forgotPasswordButton}
-            onPress={() => navigation.navigate('ForgotPassword')}
+            style={styles.loginButton}
+            onPress={() => navigation.goBack()}
           >
-            <Text style={styles.forgotPasswordText}>{strings.forgotPassword}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.registerButton}
-            onPress={() => navigation.navigate('Register')}
-          >
-            <Text style={styles.registerText}>{strings.register}</Text>
+            <Text style={styles.loginText}>{strings.alreadyHaveAccount}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -145,32 +155,24 @@ const styles = StyleSheet.create({
     borderColor: '#E3F2FD',
     fontSize: 16,
   },
-  loginButton: {
+  registerButton: {
     backgroundColor: '#2196F3',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
   },
-  loginButtonText: {
+  registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
-  forgotPasswordButton: {
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  forgotPasswordText: {
-    color: '#2196F3',
-    fontSize: 14,
-  },
-  registerButton: {
+  loginButton: {
     alignItems: 'center',
     marginTop: 16,
   },
-  registerText: {
+  loginText: {
     color: '#666',
     fontSize: 14,
   },
-}); 
+});

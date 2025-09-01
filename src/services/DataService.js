@@ -171,6 +171,17 @@ class DataService {
     }
   }
 
+  static async clearUserData() {
+    try {
+      console.log('🚪 Clearing user data...');
+      await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      console.log('✅ User data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing user data:', error);
+      throw error;
+    }
+  }
+
   static async clearAllData() {
     try {
       console.log('Clearing all data...');

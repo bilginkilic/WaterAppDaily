@@ -3,6 +3,9 @@ import LocalizedStrings from 'react-native-localization';
 const strings = new LocalizedStrings({
   en: {
     welcome: "WaterApp V2",
+    createAccount: "Create Account",
+    registerSubtitle: "Join us to start saving water",
+    alreadyHaveAccount: "Already have an account? Login",
     slogan: "Green Office Certification",
     email: "Email",
     password: "Password",
@@ -60,7 +63,18 @@ const strings = new LocalizedStrings({
     errorCalculating: "An error occurred while calculating your water consumption profile. Please try again.",
     answerRecorded: "Response recorded",
     unlockedBadges: "Conservation Achievements",
-    totalWaterSaved: "Total Water Conserved"
+    totalWaterSaved: "Total Water Conserved",
+    signOut: "Sign Out",
+    resetPassword: "Reset Password",
+    resetPasswordSubtitle: "Enter your email address and we'll send you instructions to reset your password.",
+    sendResetInstructions: "Send Reset Instructions",
+    backToLogin: "Back to Login",
+    resetEmailSent: "Password reset instructions have been sent to your email.",
+    deleteAccount: "Delete Account",
+    deleteAccountConfirmTitle: "Delete Account",
+    deleteAccountConfirmMessage: "Are you sure you want to delete your account? This action cannot be undone.",
+    cancel: "Cancel",
+    confirm: "Confirm"
   }
 });
 

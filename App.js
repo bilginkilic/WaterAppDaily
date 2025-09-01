@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
+import { RegisterScreen } from './src/screens/RegisterScreen';
 import { SurveyScreen } from './src/screens/SurveyScreen';
 import { SurveyResultsScreen } from './src/screens/SurveyResultsScreen';
 import { ChallengesScreen } from './src/screens/ChallengesScreen';
@@ -18,6 +20,8 @@ const Stack = createNativeStackNavigator();
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
   </Stack.Navigator>
 );
 

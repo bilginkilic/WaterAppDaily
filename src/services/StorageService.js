@@ -33,21 +33,54 @@ class StorageService {
 
   static async register(email, password, name) {
     try {
+      console.log('Attempting registration with:', { email, name });
+      
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Registration failed');
+      const data = await response.json();
+      console.log('Registration response:', {
+        status: response.status,
+        ok: response.ok,
+        data: data
+      });
+      
+      // Check for email already exists error
+      if (data?.error?.code === 'auth/email-already-exists' || 
+          data?.data?.error?.code === 'auth/email-already-exists' ||
+          (data?.error?.message && data.error.message.includes('already in use')) ||
+          (data?.data?.error?.message && data.data.error.message.includes('already in use'))) {
+        console.log('User already exists error detected in response');
+        throw new Error('This email is already registered. Please use a different email address or login with your existing account.');
       }
 
-      return await response.json();
+      if (!response.ok) {
+        console.log('Response not OK:', response.status, data);
+        const errorMessage = data?.data?.error?.message || 
+                           data?.error?.message || 
+                           data?.message || 
+                           'Registration failed';
+        throw new Error(errorMessage);
+      }
+
+      console.log('Registration successful:', data);
+      return data;
     } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+      console.error('Registration error details:', {
+        message: error.message,
+        stack: error.stack,
+        response: error.response
+      });
+      
+      // If the error is our custom error about existing user, pass it through
+      if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        throw error;
+      }
+      // For other errors, throw a generic error
+      throw new Error('Registration failed. Please try again.');
     }
   }
 
@@ -140,6 +173,34 @@ class StorageService {
       return await response.json();
     } catch (error) {
       console.error('Error creating initial profile:', error);
+      throw error;
+    }
+  }
+
+  static async deleteAccount(userId) {
+    try {
+      const userData = await DataService.getUserData();
+      if (!userData?.token) {
+        throw new Error('No token found');
+      }
+
+      const response = await fetch(`${API_URL}/auth/delete-account`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userData.token}`
+        },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete account');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting account:', error);
       throw error;
     }
   }
