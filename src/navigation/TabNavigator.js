@@ -1,4 +1,5 @@
 import React from 'react';
+import { Platform, Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { ChallengesScreen } from '../screens/ChallengesScreen';
@@ -21,9 +22,19 @@ export const TabNavigator = ({ route }) => {
     <Tab.Navigator
       initialRouteName={screen}
       screenOptions={{
-        tabBarActiveTintColor: '#2196F3',
-        tabBarInactiveTintColor: 'gray',
         headerShown: false,
+        tabBarStyle: {
+          height: Platform.isPad ? 70 : 55,
+          paddingBottom: Platform.isPad ? 20 : 7,
+          paddingTop: Platform.isPad ? 10 : 7,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: '#E3E3E3',
+        },
+        tabBarIconStyle: {
+          marginTop: 5,
+        },
+        tabBarAllowFontScaling: false,
       }}
     >
       <Tab.Screen
@@ -34,7 +45,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Challenges',
+          tabBarLabel: 'Tasks',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="flag-checkered" color={color} size={size} />
           ),
@@ -47,7 +58,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Achievements',
+          tabBarLabel: 'Awards',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="trophy" color={color} size={size} />
           ),
@@ -60,7 +71,7 @@ export const TabNavigator = ({ route }) => {
           waterProfile
         }}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Me',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account" color={color} size={size} />
           ),

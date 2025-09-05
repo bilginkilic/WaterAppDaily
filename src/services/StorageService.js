@@ -225,6 +225,12 @@ class StorageService {
         })
       });
 
+      if (response.status === 401) {
+        // Token expired
+        await DataService.clearUserData();
+        throw new Error('TOKEN_EXPIRED');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update waterprint');
@@ -235,6 +241,10 @@ class StorageService {
       return data;
     } catch (error) {
       console.error('Error updating waterprint:', error);
+      if (error.message === 'TOKEN_EXPIRED') {
+        // Özel hata mesajını yukarı ilet
+        throw error;
+      }
       throw error;
     }
   }

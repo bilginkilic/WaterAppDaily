@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
@@ -15,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import StorageService from '../services/StorageService';
 
 export const LoginScreen = ({ navigation }) => {
-  const { signIn } = useAuth();
+  const { signIn, startAnonymousSession } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,8 +45,20 @@ export const LoginScreen = ({ navigation }) => {
       const existingUserData = await DataService.getUserData();
       const isSurveyTaken = existingUserData?.surveyTaken || false;
       
-      // After successful login, AppStack will automatically show the appropriate screen
+      // After successful login, navigate based on survey status
       console.log('Login successful, survey status:', isSurveyTaken);
+      if (isSurveyTaken) {
+        navigation.replace('MainApp', {
+          screen: 'Main',
+          params: {
+            screen: 'Challenges'
+          }
+        });
+      } else {
+        navigation.replace('MainApp', {
+          screen: 'Intro'
+        });
+      }
     } catch (error) {
       console.error('Login error:', error);
       Alert.alert(
@@ -62,6 +75,15 @@ export const LoginScreen = ({ navigation }) => {
       <View style={styles.content}>
         <Text style={styles.title}>{strings.welcome}</Text>
         <Text style={styles.subtitle}>{strings.slogan}</Text>
+
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoText}>
+            You can use the app without logging in to track your personal water footprint. Login is only required to participate in global challenges and competitions that will be announced at{' '}
+            <Text style={styles.linkText} onPress={() => Linking.openURL('https://waterapp2.lovable.app')}>
+              waterapp2.lovable.app
+            </Text>
+          </Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
@@ -104,6 +126,27 @@ export const LoginScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerText}>{strings.register}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.line} />
+          </View>
+
+          <TouchableOpacity 
+            style={styles.skipButton}
+            onPress={async () => {
+              try {
+                await startAnonymousSession();
+                // After anonymous session, navigate to Survey directly
+                navigation.replace('Survey');
+              } catch (error) {
+                Alert.alert('Error', 'Failed to start anonymous session');
+              }
+            }}
+          >
+            <Text style={styles.skipButtonText}>Start Calculating Your Water Footprint</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -172,5 +215,46 @@ const styles = StyleSheet.create({
   registerText: {
     color: '#666',
     fontSize: 14,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E3E3E3',
+  },
+  orText: {
+    marginHorizontal: 10,
+    color: '#666',
+    fontSize: 14,
+  },
+  skipButton: {
+    backgroundColor: '#F5F5F5',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  infoContainer: {
+    backgroundColor: '#E3F2FD',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  linkText: {
+    color: '#2196F3',
+    textDecorationLine: 'underline',
   },
 }); 

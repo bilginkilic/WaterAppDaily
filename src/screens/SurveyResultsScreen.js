@@ -91,8 +91,40 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
     try {
       // Get user data including token
       const userData = await DataService.getUserData();
+      
+      // Check if user is logged in
       if (!userData || !userData.email) {
-        throw new Error('User not authenticated');
+        // If not logged in, show login prompt
+        Alert.alert(
+          'Choose How to Continue',
+          'You can continue offline to track your personal progress locally, or log in to participate in global challenges and sync your data with the community at waterapp2.lovable.app',
+          [
+            {
+              text: 'Continue Offline',
+              onPress: async () => {
+                // Save data locally only
+                await DataService.markSurveyCompleted();
+                // For offline mode, navigate to MainApp and then to Challenges
+                navigation.replace('MainApp', {
+                  screen: 'TabNavigator',
+                  params: {
+                    screen: 'Challenges',
+                    params: {
+                      improvementAreas,
+                      waterProfile: waterProfileData
+                    }
+                  }
+                });
+              },
+              style: 'cancel'
+            },
+            {
+              text: 'Login',
+              onPress: () => navigation.replace('Auth', { screen: 'Login' })
+            }
+          ]
+        );
+        return;
       }
 
       // Use the total water footprint from survey results
@@ -114,16 +146,18 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
       console.log('Starting challenge for user:', userData.email);
       console.log('Saving water profile:', waterProfileData);
 
-      // Send data to API
-      try {
-        await StorageService.createInitialProfile(userData.token, {
-          initialWaterprint: initialWaterFootprint,
-          answers: results.answers,
-          correctAnswersCount: results.achievements.length
-        });
-      } catch (apiError) {
-        console.warn('Failed to sync with API but continuing with local data:', apiError);
-        throw apiError;
+      // Send data to API only if user is logged in
+      if (userData && userData.token) {
+        try {
+          await StorageService.createInitialProfile(userData.token, {
+            initialWaterprint: initialWaterFootprint,
+            answers: results.answers,
+            correctAnswersCount: results.achievements.length
+          });
+        } catch (apiError) {
+          console.warn('Failed to sync with API but continuing with local data:', apiError);
+          // Don't throw error, just continue with local data
+        }
       }
 
       // Mark survey as completed
@@ -135,9 +169,15 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         waterProfile: waterProfileData 
       });
       
-      navigation.replace('Challenges', {
-        improvementAreas,
-        waterProfile: waterProfileData
+      navigation.replace('MainApp', {
+        screen: 'TabNavigator',
+        params: {
+          screen: 'Challenges',
+          params: {
+            improvementAreas,
+            waterProfile: waterProfileData
+          }
+        }
       });
     } catch (error) {
       console.error('Error starting challenge:', error);
@@ -147,7 +187,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         [
           {
             text: 'OK',
-            onPress: () => navigation.replace('Login')
+            onPress: () => navigation.replace('Auth', { screen: 'Login' })
           }
         ]
       );
@@ -159,7 +199,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   const handleLogout = async () => {
     try {
       await signOut();
-      navigation.replace('Login');
+      navigation.replace('Auth', { screen: 'Login' });
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout. Please try again.');

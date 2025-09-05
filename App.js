@@ -6,7 +6,7 @@ import { ForgotPasswordScreen } from './src/screens/ForgotPasswordScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { SurveyScreen } from './src/screens/SurveyScreen';
 import { SurveyResultsScreen } from './src/screens/SurveyResultsScreen';
-import { ChallengesScreen } from './src/screens/ChallengesScreen';
+import { TabNavigator } from './src/navigation/TabNavigator';
 import NotificationService from './src/services/NotificationService';
 import { IntroScreen } from './src/screens/IntroScreen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -56,11 +56,11 @@ const AppStack = () => {
           <Stack.Screen name="Intro" component={IntroScreen} />
           <Stack.Screen name="Survey" component={SurveyScreen} />
           <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
-          <Stack.Screen name="Challenges" component={ChallengesScreen} />
+          <Stack.Screen name="TabNavigator" component={TabNavigator} />
         </>
       ) : (
         <>
-          <Stack.Screen name="Challenges" component={ChallengesScreen} />
+          <Stack.Screen name="TabNavigator" component={TabNavigator} />
           <Stack.Screen name="Survey" component={SurveyScreen} />
           <Stack.Screen name="SurveyResults" component={SurveyResultsScreen} />
         </>
@@ -71,10 +71,15 @@ const AppStack = () => {
 
 function AppContent() {
   const { isLoading, token } = useAuth();
+  const [hasSeenIntro, setHasSeenIntro] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
       try {
+        // Check if user has seen intro
+        const introSeen = await DataService.hasSeenIntro();
+        setHasSeenIntro(introSeen);
+
         // Initialize language
         const savedLanguage = await AsyncStorage.getItem('userLanguage');
         if (savedLanguage) {
@@ -86,8 +91,8 @@ function AppContent() {
 
         // Initialize and validate tasks
         const StorageService = require('./src/services/StorageService').default;
-       // await StorageService.initializeTasks();
-       // await StorageService.validateAndUpdateTasks();
+        // await StorageService.initializeTasks();
+        // await StorageService.validateAndUpdateTasks();
       } catch (error) {
         console.error('Initialization error:', error);
       }
@@ -97,10 +102,12 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Schedule daily reminders
-    NotificationService.scheduleReminderNotification(10, 0); // Morning 10:00
-    NotificationService.scheduleMotivationalNotification(18, 0); // Evening 18:00
-  }, []);
+    // Schedule daily reminders only if user is logged in
+    if (token) {
+      NotificationService.scheduleReminderNotification(10, 0); // Morning 10:00
+      NotificationService.scheduleMotivationalNotification(18, 0); // Evening 18:00
+    }
+  }, [token]);
 
   if (isLoading) {
     return null;
@@ -108,7 +115,31 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      {token ? <AppStack /> : <AuthStack />}
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!hasSeenIntro && (
+          <Stack.Screen 
+            name="Intro" 
+            component={IntroScreen} 
+            options={{ gestureEnabled: false }}
+          />
+        )}
+        <Stack.Screen 
+          name="Survey" 
+          component={SurveyScreen} 
+        />
+        <Stack.Screen 
+          name="SurveyResults" 
+          component={SurveyResultsScreen} 
+        />
+        <Stack.Screen 
+          name="Auth" 
+          component={AuthStack} 
+        />
+        <Stack.Screen 
+          name="MainApp" 
+          component={AppStack} 
+        />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

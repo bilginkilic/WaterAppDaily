@@ -7,6 +7,8 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [anonymousData, setAnonymousData] = useState(null);
 
   useEffect(() => {
     // Uygulama başladığında authentication durumunu kontrol et
@@ -21,10 +23,13 @@ export const AuthProvider = ({ children }) => {
       const userId = await AsyncStorage.getItem('userId');
       const userName = await AsyncStorage.getItem('userName');
       const userEmail = await AsyncStorage.getItem('userEmail');
+      const anonymousFlag = await AsyncStorage.getItem('isAnonymous');
+      const storedAnonymousData = await AsyncStorage.getItem('anonymousData');
 
       console.log('Found stored auth data:', { 
         token: token ? '✅ Token exists' : '❌ No token',
-        userId: userId || '❌ No userId' 
+        userId: userId || '❌ No userId',
+        isAnonymous: anonymousFlag === 'true' ? '👤 Yes' : '❌ No'
       });
 
       if (token && userId) {
@@ -35,8 +40,15 @@ export const AuthProvider = ({ children }) => {
           name: userName || 'User',
           email: userEmail || ''
         });
+        setIsAnonymous(false);
+      } else if (anonymousFlag === 'true') {
+        console.log('👤 Anonymous session found');
+        setIsAnonymous(true);
+        if (storedAnonymousData) {
+          setAnonymousData(JSON.parse(storedAnonymousData));
+        }
       } else {
-        console.log('❌ No valid auth data, user needs to log in');
+        console.log('❌ No valid auth data, starting fresh');
       }
     } catch (error) {
       console.error('❌ Auth state check error:', error);
@@ -84,6 +96,50 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const startAnonymousSession = async () => {
+    try {
+      console.log('👤 Starting anonymous session...');
+      setIsAnonymous(true);
+      setAnonymousData({
+        surveyCompleted: false,
+        waterFootprint: null,
+        lastCalculation: null
+      });
+      await AsyncStorage.setItem('isAnonymous', 'true');
+      console.log('✅ Anonymous session started');
+    } catch (error) {
+      console.error('❌ Anonymous session error:', error);
+      throw error;
+    }
+  };
+
+  const saveAnonymousData = async (data) => {
+    try {
+      console.log('💾 Saving anonymous data:', data);
+      setAnonymousData(data);
+      await AsyncStorage.setItem('anonymousData', JSON.stringify(data));
+      console.log('✅ Anonymous data saved');
+    } catch (error) {
+      console.error('❌ Save anonymous data error:', error);
+      throw error;
+    }
+  };
+
+  const convertToFullAccount = async (token, user) => {
+    try {
+      console.log('🔄 Converting anonymous account to full account...');
+      await signIn(token, user);
+      setIsAnonymous(false);
+      setAnonymousData(null);
+      await AsyncStorage.removeItem('isAnonymous');
+      await AsyncStorage.removeItem('anonymousData');
+      console.log('✅ Account converted successfully');
+    } catch (error) {
+      console.error('❌ Account conversion error:', error);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     try {
       console.log('🚪 Signing out...');
@@ -107,6 +163,11 @@ export const AuthProvider = ({ children }) => {
         token: userToken,
         signIn,
         signOut,
+        isAnonymous,
+        anonymousData,
+        startAnonymousSession,
+        saveAnonymousData,
+        convertToFullAccount
       }}
     >
       {children}

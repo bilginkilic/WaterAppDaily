@@ -194,12 +194,32 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
 
           const waterFootprint = await DataService.getCurrentWaterFootprint();
           
-          // API update
-          await StorageService.updateWaterprint({
-            currentWaterprint: waterFootprint,
-            taskId: currentQuestion.task.questionId,
-            waterprintReduction: selectedOption.valueSaving
-          });
+          // API update only if user is logged in
+          const userData = await DataService.getUserData();
+          if (userData?.token) {
+            try {
+              await StorageService.updateWaterprint({
+                currentWaterprint: waterFootprint,
+                taskId: currentQuestion.task.questionId,
+                waterprintReduction: selectedOption.valueSaving
+              });
+            } catch (error) {
+              if (error.message === 'TOKEN_EXPIRED') {
+                Alert.alert(
+                  'Session Expired',
+                  'Your session has expired. Please login again to sync your progress.',
+                  [
+                    {
+                      text: 'Login',
+                      onPress: () => navigation.replace('Auth', { screen: 'Login' })
+                    }
+                  ]
+                );
+                return;
+              }
+              console.log('API sync failed:', error.message);
+            }
+          }
 
           // Update parent component
           onTasksUpdate({
@@ -210,11 +230,13 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
         } catch (error) {
           console.error('Error in task update:', error);
 
-          // Rollback if local update was successful but API failed
-          if (localUpdateSuccessful && originalData) {
+          // Only attempt rollback if user is logged in and API sync failed
+          const userData = await DataService.getUserData();
+          if (userData?.token && localUpdateSuccessful && originalData) {
             try {
               // Restore original data
-              await DataService.restoreData(originalData);
+              await DataService.saveTasks(originalData.tasks);
+              await DataService.saveAchievements(originalData.achievements);
               Alert.alert(
                 'Error',
                 'Failed to sync with server. Changes have been reverted.',
@@ -589,34 +611,34 @@ const SegmentControl = ({ selectedSegment, onSegmentChange }) => {
           size={24} 
           color={selectedSegment === 'challenges' ? '#2196F3' : '#666'} 
         />
-        <Text style={[styles.segmentText, selectedSegment === 'challenges' && styles.selectedSegmentText]}>
-          Challenges
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.segmentButton, selectedSegment === 'achievements' && styles.selectedSegment]}
-        onPress={() => onSegmentChange('achievements')}
-      >
-        <MaterialCommunityIcons 
-          name="trophy" 
-          size={24} 
-          color={selectedSegment === 'achievements' ? '#2196F3' : '#666'} 
-        />
-        <Text style={[styles.segmentText, selectedSegment === 'achievements' && styles.selectedSegmentText]}>
-          Achievements
-        </Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.segmentButton, selectedSegment === 'profile' && styles.selectedSegment]}
-        onPress={() => onSegmentChange('profile')}
-      >
-        <MaterialCommunityIcons 
-          name="account" 
-          size={24} 
-          color={selectedSegment === 'profile' ? '#2196F3' : '#666'} 
-        />
-        <Text style={[styles.segmentText, selectedSegment === 'profile' && styles.selectedSegmentText]}>
-          Profile
+                  <Text style={[styles.segmentText, selectedSegment === 'challenges' && styles.selectedSegmentText]}>
+            Tasks
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentButton, selectedSegment === 'achievements' && styles.selectedSegment]}
+          onPress={() => onSegmentChange('achievements')}
+        >
+          <MaterialCommunityIcons 
+            name="trophy" 
+            size={24} 
+            color={selectedSegment === 'achievements' ? '#2196F3' : '#666'} 
+          />
+          <Text style={[styles.segmentText, selectedSegment === 'achievements' && styles.selectedSegmentText]}>
+            Awards
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentButton, selectedSegment === 'profile' && styles.selectedSegment]}
+          onPress={() => onSegmentChange('profile')}
+        >
+          <MaterialCommunityIcons 
+            name="account" 
+            size={24} 
+            color={selectedSegment === 'profile' ? '#2196F3' : '#666'} 
+          />
+          <Text style={[styles.segmentText, selectedSegment === 'profile' && styles.selectedSegmentText]}>
+            Me
         </Text>
       </TouchableOpacity>
     </View>

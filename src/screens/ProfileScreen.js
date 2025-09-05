@@ -9,13 +9,15 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
 import { useAuth } from '../context/AuthContext';
 import StorageService from '../services/StorageService';
 
-export const ProfileScreen = ({ navigation }) => {
-  const { signOut: authSignOut } = useAuth();
+export const ProfileScreen = () => {
+  const navigation = useNavigation();
+  const { signOut: authSignOut, token } = useAuth();
   const [waterFootprint, setWaterFootprint] = useState(0);
   const [initialWaterFootprint, setInitialWaterFootprint] = useState(0);
   const [tasks, setTasks] = useState([]);
@@ -58,9 +60,13 @@ export const ProfileScreen = ({ navigation }) => {
 
   const handleSignOut = async () => {
     try {
-      await authSignOut();
-      await DataService.clearUserData();
-      navigation.replace('Login');
+      if (navigation) {
+        // Navigate first
+        navigation.replace('Auth', { screen: 'Login' });
+        // Then clear data
+        await authSignOut();
+        await DataService.clearUserData();
+      }
     } catch (error) {
       console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
@@ -82,11 +88,11 @@ export const ProfileScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const userData = await DataService.getUserData();
-              if (userData?.userId) {
+              if (userData?.userId && navigation) {
+                navigation.replace('Auth', { screen: 'Login' });
                 await StorageService.deleteAccount(userData.userId);
                 await DataService.clearUserData();
                 await authSignOut();
-                navigation.replace('Login');
               }
             } catch (error) {
               console.error('Error deleting account:', error);
@@ -131,19 +137,34 @@ export const ProfileScreen = ({ navigation }) => {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.signOutButton}
-              onPress={handleSignOut}
-            >
-              <Text style={styles.signOutButtonText}>{strings.signOut}</Text>
-            </TouchableOpacity>
+            {token ? (
+              <>
+                <TouchableOpacity
+                  style={styles.signOutButton}
+                  onPress={handleSignOut}
+                >
+                  <Text style={styles.signOutButtonText}>{strings.signOut}</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.deleteAccountButton}
-              onPress={handleDeleteAccount}
-            >
-              <Text style={styles.deleteAccountButtonText}>{strings.deleteAccount}</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteAccountButton}
+                  onPress={handleDeleteAccount}
+                >
+                  <Text style={styles.deleteAccountButtonText}>{strings.deleteAccount}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity
+                style={[styles.signOutButton, { backgroundColor: '#4CAF50' }]}
+                onPress={() => {
+                  if (navigation) {
+                    navigation.replace('Auth', { screen: 'Login' });
+                  }
+                }}
+              >
+                <Text style={styles.signOutButtonText}>Login to Sync Your Progress</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </ScrollView>

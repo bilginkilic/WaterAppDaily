@@ -9,11 +9,30 @@ const STORAGE_KEYS = {
   ACHIEVEMENTS: '@achievements',
   SURVEY_COMPLETED: '@survey_completed',
   WATER_FOOTPRINT: '@water_footprint',
-  SURVEY_ANSWERS_INIT: '@survey_answers_init'
+  SURVEY_ANSWERS_INIT: '@survey_answers_init',
+  INTRO_SEEN: '@intro_seen'
 };
 
 class DataService {
- ;
+  static async setIntroSeen(seen) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.INTRO_SEEN, JSON.stringify(seen));
+      console.log('Intro seen status saved:', seen);
+    } catch (error) {
+      console.error('Error saving intro seen status:', error);
+      throw error;
+    }
+  }
+
+  static async hasSeenIntro() {
+    try {
+      const seen = await AsyncStorage.getItem(STORAGE_KEYS.INTRO_SEEN);
+      return seen ? JSON.parse(seen) : false;
+    } catch (error) {
+      console.error('Error getting intro seen status:', error);
+      return false;
+    }
+  }
   
       
   static async setUserData(userData) {

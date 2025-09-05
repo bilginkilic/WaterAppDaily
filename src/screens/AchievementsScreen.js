@@ -179,7 +179,7 @@ export const AchievementsScreen = ({ navigation }) => {
           <View style={styles.emptyStateContainer}>
             <MaterialCommunityIcons name="information-outline" size={48} color="#2196F3" />
             <Text style={styles.emptyStateText}>
-              Complete water conservation tasks in the Challenges tab to earn achievements and build your collection here!
+              Complete water conservation tasks in the Tasks tab to earn awards and build your collection here!
             </Text>
             <TouchableOpacity 
               style={styles.startButton}
@@ -189,7 +189,7 @@ export const AchievementsScreen = ({ navigation }) => {
                 }
               }}
             >
-              <Text style={styles.startButtonText}>Go to Challenges</Text>
+              <Text style={styles.startButtonText}>Go to Tasks</Text>
             </TouchableOpacity>
           </View>
         ) : (

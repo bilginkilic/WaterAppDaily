@@ -8,13 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		00E356F31AD99517003FC87E /* WaterAppDailyTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* WaterAppDailyTests.m */; };
-		0C54F5E27A493306DEE927F4 /* libPods-WaterAppDaily-WaterAppDailyTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B5A7DE2223592B0E9E2C68DA /* libPods-WaterAppDaily-WaterAppDailyTests.a */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+		22E1622F77023549BCFB8EE0 /* libPods-WaterAppDaily.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 07D8B271BEFD0BDAEC2BAB16 /* libPods-WaterAppDaily.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		CE0A30C19AA35C440C28F2C5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		E78963CF848665B99FDBA76F /* libPods-WaterAppDaily.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9C2C3C3035910227BB62A4DA /* libPods-WaterAppDaily.a */; };
+		FE2FB7B27A2BBD9032D04755 /* libPods-WaterAppDaily-WaterAppDailyTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BCD25763319AB8C8D89633FB /* libPods-WaterAppDaily-WaterAppDailyTests.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,7 +31,7 @@
 		00E356EE1AD99517003FC87E /* WaterAppDailyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WaterAppDailyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00E356F21AD99517003FC87E /* WaterAppDailyTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WaterAppDailyTests.m; sourceTree = "<group>"; };
-		07CE1890D2C2E043D25F1E2B /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig"; sourceTree = "<group>"; };
+		07D8B271BEFD0BDAEC2BAB16 /* libPods-WaterAppDaily.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WaterAppDaily.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* WaterAppDaily.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterAppDaily.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = WaterAppDaily/AppDelegate.h; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = WaterAppDaily/AppDelegate.mm; sourceTree = "<group>"; };
@@ -39,13 +39,13 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = WaterAppDaily/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = WaterAppDaily/main.m; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = WaterAppDaily/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		75510C1CEB0A62C480762EE8 /* Pods-WaterAppDaily.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily.debug.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily.debug.xcconfig"; sourceTree = "<group>"; };
+		599099B134D42093AF4D0739 /* Pods-WaterAppDaily.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily.release.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily.release.xcconfig"; sourceTree = "<group>"; };
+		7765E955BD0B07273A3878CB /* Pods-WaterAppDaily.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily.debug.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily.debug.xcconfig"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = WaterAppDaily/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9C2C3C3035910227BB62A4DA /* libPods-WaterAppDaily.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WaterAppDaily.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		B5A7DE2223592B0E9E2C68DA /* libPods-WaterAppDaily-WaterAppDailyTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WaterAppDaily-WaterAppDailyTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		BA6A28DD5902554706AE89BE /* Pods-WaterAppDaily.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily.release.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily.release.xcconfig"; sourceTree = "<group>"; };
+		8BFB5BF192E13C5D45BB4B9D /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig"; sourceTree = "<group>"; };
+		BCD25763319AB8C8D89633FB /* libPods-WaterAppDaily-WaterAppDailyTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-WaterAppDaily-WaterAppDailyTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		EFDA0C47711074BF5139E204 /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig"; sourceTree = "<group>"; };
+		EF39EAA12507E80A573409CB /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig"; path = "Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,7 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0C54F5E27A493306DEE927F4 /* libPods-WaterAppDaily-WaterAppDailyTests.a in Frameworks */,
+				FE2FB7B27A2BBD9032D04755 /* libPods-WaterAppDaily-WaterAppDailyTests.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -61,7 +61,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E78963CF848665B99FDBA76F /* libPods-WaterAppDaily.a in Frameworks */,
+				22E1622F77023549BCFB8EE0 /* libPods-WaterAppDaily.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,8 +103,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				9C2C3C3035910227BB62A4DA /* libPods-WaterAppDaily.a */,
-				B5A7DE2223592B0E9E2C68DA /* libPods-WaterAppDaily-WaterAppDailyTests.a */,
+				07D8B271BEFD0BDAEC2BAB16 /* libPods-WaterAppDaily.a */,
+				BCD25763319AB8C8D89633FB /* libPods-WaterAppDaily-WaterAppDailyTests.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -143,10 +143,10 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				75510C1CEB0A62C480762EE8 /* Pods-WaterAppDaily.debug.xcconfig */,
-				BA6A28DD5902554706AE89BE /* Pods-WaterAppDaily.release.xcconfig */,
-				07CE1890D2C2E043D25F1E2B /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */,
-				EFDA0C47711074BF5139E204 /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */,
+				7765E955BD0B07273A3878CB /* Pods-WaterAppDaily.debug.xcconfig */,
+				599099B134D42093AF4D0739 /* Pods-WaterAppDaily.release.xcconfig */,
+				8BFB5BF192E13C5D45BB4B9D /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */,
+				EF39EAA12507E80A573409CB /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -158,12 +158,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "WaterAppDailyTests" */;
 			buildPhases = (
-				AD453209BBE5EBF58C970E17 /* [CP] Check Pods Manifest.lock */,
+				D811C248621B0CA06872AA39 /* [CP] Check Pods Manifest.lock */,
 				00E356EA1AD99517003FC87E /* Sources */,
 				00E356EB1AD99517003FC87E /* Frameworks */,
 				00E356EC1AD99517003FC87E /* Resources */,
-				55E03F24ECB295D051A1E33A /* [CP] Embed Pods Frameworks */,
-				DE255AF35C327183270E0F46 /* [CP] Copy Pods Resources */,
+				C5DB65FD4DF5A1053F09B245 /* [CP] Embed Pods Frameworks */,
+				D5C751F7983044A377A63D4B /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -179,13 +179,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "WaterAppDaily" */;
 			buildPhases = (
-				D4A1B4729F073361C173E99E /* [CP] Check Pods Manifest.lock */,
+				49E8FA6A165164AFF07F8958 /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				DC70E1DD713D5C4810B8A839 /* [CP] Embed Pods Frameworks */,
-				F15400CB35DBEAB9D0732A11 /* [CP] Copy Pods Resources */,
+				47953D5364EE3721D9AE223A /* [CP] Embed Pods Frameworks */,
+				36ACB993C6900F0ABE2C2B14 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -269,46 +269,41 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		55E03F24ECB295D051A1E33A /* [CP] Embed Pods Frameworks */ = {
+		36ACB993C6900F0ABE2C2B14 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		47953D5364EE3721D9AE223A /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		AD453209BBE5EBF58C970E17 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-WaterAppDaily-WaterAppDailyTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		D4A1B4729F073361C173E99E /* [CP] Check Pods Manifest.lock */ = {
+		49E8FA6A165164AFF07F8958 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -330,24 +325,24 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		DC70E1DD713D5C4810B8A839 /* [CP] Embed Pods Frameworks */ = {
+		C5DB65FD4DF5A1053F09B245 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-frameworks.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		DE255AF35C327183270E0F46 /* [CP] Copy Pods Resources */ = {
+		D5C751F7983044A377A63D4B /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -364,21 +359,26 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily-WaterAppDailyTests/Pods-WaterAppDaily-WaterAppDailyTests-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		F15400CB35DBEAB9D0732A11 /* [CP] Copy Pods Resources */ = {
+		D811C248621B0CA06872AA39 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			name = "[CP] Copy Pods Resources";
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
 			outputFileListPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-WaterAppDaily-WaterAppDailyTests-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-WaterAppDaily/Pods-WaterAppDaily-resources.sh\"\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -414,7 +414,7 @@
 /* Begin XCBuildConfiguration section */
 		00E356F61AD99517003FC87E /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 07CE1890D2C2E043D25F1E2B /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */;
+			baseConfigurationReference = 8BFB5BF192E13C5D45BB4B9D /* Pods-WaterAppDaily-WaterAppDailyTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -441,7 +441,7 @@
 		};
 		00E356F71AD99517003FC87E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EFDA0C47711074BF5139E204 /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */;
+			baseConfigurationReference = EF39EAA12507E80A573409CB /* Pods-WaterAppDaily-WaterAppDailyTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COPY_PHASE_STRIP = NO;
@@ -465,7 +465,7 @@
 		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 75510C1CEB0A62C480762EE8 /* Pods-WaterAppDaily.debug.xcconfig */;
+			baseConfigurationReference = 7765E955BD0B07273A3878CB /* Pods-WaterAppDaily.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -497,7 +497,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BA6A28DD5902554706AE89BE /* Pods-WaterAppDaily.release.xcconfig */;
+			baseConfigurationReference = 599099B134D42093AF4D0739 /* Pods-WaterAppDaily.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

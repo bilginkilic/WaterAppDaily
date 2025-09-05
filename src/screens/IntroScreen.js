@@ -10,6 +10,7 @@ import {
   Image,
 } from 'react-native';
 import strings from '../localization/strings';
+import DataService from '../services/DataService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const { width } = Dimensions.get('window');
@@ -51,7 +52,15 @@ export const IntroScreen = ({ navigation }) => {
     );
   };
 
-  const handleNext = () => {
+  const markIntroAsSeen = async () => {
+    try {
+      await DataService.setIntroSeen(true);
+    } catch (error) {
+      console.error('Error saving intro status:', error);
+    }
+  };
+
+  const handleNext = async () => {
     if (currentSlideIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({
         index: currentSlideIndex + 1,
@@ -59,11 +68,13 @@ export const IntroScreen = ({ navigation }) => {
       });
       setCurrentSlideIndex(currentSlideIndex + 1);
     } else {
+      await markIntroAsSeen();
       navigation.replace('Survey');
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    await markIntroAsSeen();
     navigation.replace('Survey');
   };
 

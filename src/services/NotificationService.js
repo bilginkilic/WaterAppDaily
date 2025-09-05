@@ -96,8 +96,8 @@ class NotificationService {
     if (remainingChallenges > 0) {
       PushNotification.localNotification({
         channelId: 'water-save-reminders',
-        title: "Incomplete Challenges",
-        message: `You have ${remainingChallenges} water-saving challenges remaining today!`,
+        title: "Incomplete Tasks",
+        message: `You have ${remainingChallenges} water-saving tasks remaining today!`,
         allowWhileIdle: true,
       });
     }
