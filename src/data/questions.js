@@ -6,7 +6,7 @@ const questions = [
     category: categoryIds.DISHWASHING,
     text: 'Do you use a dishwasher to wash your dishes?',
     options: [
-      { text: 'Yes', valueSaving: 111, valueTotal: 15, task: 'Well done, you\'ve saved time & 15 litres of water', category: categoryIds.DISHWASHING, type: 'Achievement' },
+      { text: 'Yes', valueSaving: 111, valueTotal: 15, task: "Well done, you've saved time & 15 litres of water", category: categoryIds.DISHWASHING, type: 'Achievement' },
       { text: 'No', valueSaving: 0, valueTotal: 126, task: 'Pre-rinsing dishes wastes 1,232 litres of water a year', category: categoryIds.DISHWASHING, type: 'Task' }
     ],
     trainingText: 'Hand washing dishes can use up to 5 times more water compared to using a dishwasher.',
@@ -54,7 +54,7 @@ const questions = [
     category: categoryIds.PLUMBING,
     text: 'Are the taps in your home fitted with flow regulators ("aerators")?',
     options: [
-      { text: 'Yes', valueSaving: 44, valueTotal: 76, task: 'That\'s great - your saving over 8 litres of water a minute', category: categoryIds.PLUMBING, type: 'Achievement' },
+      { text: 'Yes', valueSaving: 44, valueTotal: 76, task: "That's great - your saving over 8 litres of water a minute", category: categoryIds.PLUMBING, type: 'Achievement' },
       { text: 'No', valueSaving: 0, valueTotal: 120, task: 'Did you know, aerators can use less than 800ml of water. Please take necessary action and save money.', category: categoryIds.PLUMBING, type: 'Task' }
     ],
     trainingText: 'Regular taps can use up to twice as much water as their low-flow counterparts.',
@@ -70,18 +70,18 @@ const questions = [
     category: categoryIds.SHOWER,
     text: 'How long does it take you to take shower?',
     options: [
-      { text: 'Under 5 mins', valueSaving: 160, valueTotal: 70, task: '5 minutes shower is the target and it is a hard challenge, congratulations!', category: categoryIds.SHOWER, type: 'Achievement' },
+      { text: 'Under 5 mins', valueSaving: 180, valueTotal: 70, task: '5 minutes shower is the target and it is a hard challenge, congratulations!', category: categoryIds.SHOWER, type: 'Achievement' },
       { text: '5 - 10 mins', valueSaving: 80, valueTotal: 150, task: 'Decreasing your shower duration makes a significant difference, take the necessary action!', category: categoryIds.SHOWER, type: 'Task' },
-      { text: '11 - 15 mins', valueSaving: -20, valueTotal: 250, task: 'Decreasing your shower duration makes a significant difference, take the necessary action!', category: categoryIds.SHOWER, type: 'Task' },
-      { text: 'Over 15 mins', valueSaving: -220, valueTotal: 450, task: 'Decreasing your shower duration makes a significant difference, take the necessary action!', category: categoryIds.SHOWER, type: 'Task' },
-      { text: 'Use a bucket', valueSaving: 210, valueTotal: 20, task: 'Bucket usage is the target and it is a hard challenge, congratulations!', category: categoryIds.SHOWER, type: 'Achievement' }
+      { text: '11 - 15 mins', valueSaving: 0, valueTotal: 250, task: 'Decreasing your shower duration makes a significant difference, take the necessary action!', category: categoryIds.SHOWER, type: 'Task' },
+      { text: 'Over 15 mins', valueSaving: -200, valueTotal: 450, task: 'Decreasing your shower duration makes a significant difference, take the necessary action!', category: categoryIds.SHOWER, type: 'Task' },
+      { text: 'Use a bucket', valueSaving: 230, valueTotal: 20, task: 'Bucket usage is the target and it is a hard challenge, congratulations!', category: categoryIds.SHOWER, type: 'Achievement' }
     ],
     trainingText: 'Every additional minute in the shower uses up to 5 gallons of water.',
     content: {
       message: 'Time to reflect! Can you cut down a few minutes?',
       image: 'shower-timer.jpg',
       video: 'https://www.youtube.com/watch?v=v-TwsMtvw7w',
-      additionalInfo: 'By reducing your shower time, you save water and energy'
+      additionalInfo: 'By reducing your shower time you save water and energy'
     }
   },
   {
@@ -105,8 +105,8 @@ const questions = [
     category: categoryIds.DAILY,
     text: 'Do you turn off the water while you brush your teeth?',
     options: [
-      { text: 'Yes', valueSaving: 2, valueTotal: 2, task: 'You saved 10 liters for your each brush, congratulations!', category: categoryIds.DAILY, type: 'Achievement' },
-      { text: 'No', valueSaving: 0, valueTotal: 4, task: 'Turn off the water and save 10 liters more for your each brush, take the necessary action!', category: categoryIds.DAILY, type: 'Task' }
+      { text: 'Yes', valueSaving: 10, valueTotal: 2, task: 'You saved 10 liters for your each brush, congratulations!', category: categoryIds.DAILY, type: 'Achievement' },
+      { text: 'No', valueSaving: 0, valueTotal: 12, task: 'Turn off the water and save 10 liters more for your each brush, take the necessary action!', category: categoryIds.DAILY, type: 'Task' }
     ],
     trainingText: 'Turning off the water while brushing can save significant amounts over time.',
     content: {
@@ -118,42 +118,29 @@ const questions = [
   },
   {
     id: 8,
-    category: categoryIds.PLUMBING,
-    text: 'Are you aware of any leaking pipes?',
+    category: categoryIds.APPLIANCES,
+    text: 'Do you use eco-mode on house appliances such as dishwasher and washing machine?',
     options: [
-      { text: 'Yes', valueSaving: 0, valueTotal: 32, task: '32 liters more with only one leaky faucet, take the necessary action!', category: categoryIds.PLUMBING, type: 'Task' },
-      { text: 'No', valueSaving: 32, valueTotal: 0, task: 'Good job on maintaining your plumbing! It is great but please be aware as leaks are unpredicatable.', category: categoryIds.PLUMBING, type: 'Achievement' }
+      { text: 'Yes', valueSaving: 4500, valueTotal: 10050, task: 'Good job, keep using the eco-mode!', category: categoryIds.APPLIANCES, type: 'Achievement' },
+      { text: 'Sometimes', valueSaving: 2250, valueTotal: 10050, task: 'Try and use eco-mode always.', category: categoryIds.APPLIANCES, type: 'Task' },
+      { text: 'No', valueSaving: 0, valueTotal: 10050, task: 'Change to eco-mode and save 50% for washing machine and 20% for dish washer!', category: categoryIds.APPLIANCES, type: 'Task' }
     ],
-    trainingText: 'Maintaining your plumbing system ensures no wastage and saves money.',
+    trainingText: 'Using eco-mode can save 20% water for dishwasher and 50% for washing machines (on average).',
     content: {
-      message: 'Regular checks keep your plumbing in top shape',
-      image: 'leaking-pipe.jpg',
-      video: 'https://www.youtube.com/watch?v=Rl6YOGCoZvU',
-      additionalInfo: 'Leaks can waste a lot of water and increase bills'
+      message: 'If your appliances has the choice of eco-mode, always opt for that!',
+      image: 'eco-mode.jpg',
+      video: 'https://www.youtube.com/watch?v=vsVcLK4fRGI',
+      additionalInfo: 'If your dishwasher or washing machine does not have the eco-mode, focus on full load as a minimum.'
     }
   },
   {
     id: 9,
-    text: 'Do you own a vehicle?',
-    options: [
-      { text: 'No', valueSaving: 0, valueTotal: 0, task: null, category: 'vehicle', type: null },
-      { text: 'Yes', valueSaving: 0, valueTotal: 0, task: null, category: 'vehicle', type: null }
-    ],
-    trainingText: 'Vehicle ownership affects water usage through washing habits.',
-    content: {
-      message: 'Consider eco-friendly car washing methods',
-      image: 'car-wash.jpg',
-      video: 'https://www.youtube.com/watch?v=RoQRdHF2qgI',
-      additionalInfo: 'Vehicle maintenance can impact water consumption'
-    }
-  },
-  {
-    id: 10,
     category: categoryIds.CAR,
     text: 'Do you manually wash your car or do you use pressure washer system?',
     options: [
       { text: 'Yourself', valueSaving: 0, valueTotal: 200, task: '120 liters more with each car wash, take the necessary action!', category: categoryIds.CAR, type: 'Task' },
-      { text: 'A professional car cleaning service', valueSaving: 120, valueTotal: 80, task: 'Washing your car by pressure washer systems you saved 120 liters water, congratulations!', category: categoryIds.CAR, type: 'Achievement' }
+      { text: 'A professional car cleaning service', valueSaving: 120, valueTotal: 80, task: 'Washing your car by pressure washer systems you saved 120 liters water, congratulations!', category: categoryIds.CAR, type: 'Achievement' },
+      { text: "Don't have a car", valueSaving: 0, valueTotal: 0, task: null, category: categoryIds.CAR, type: 'Achievement' }
     ],
     trainingText: 'Professional car washes typically use less water than manual washing.',
     content: {
@@ -162,7 +149,24 @@ const questions = [
       video: 'https://www.youtube.com/watch?v=RoQRdHF2qgI',
       additionalInfo: 'Use water-efficient methods for vehicle cleaning'
     }
+  },
+  {
+    id: 10,
+    category: categoryIds.GARDEN,
+    text: 'Do you use rain water when watering the garden or your indoor plants?',
+    options: [
+      { text: 'Yes', valueSaving: 4500, valueTotal: 10000, task: 'Well done, you potentially replacing 40-50% of your mains water usage for outdoor and indoor non-potable needs.', category: categoryIds.GARDEN, type: 'Achievement' },
+      { text: 'No', valueSaving: 0, valueTotal: 10000, task: 'Collecting rain water and watering your garden and indoor plants can replace 40-50% of your main usage for outdoor and indoor non-potable needs.', category: categoryIds.GARDEN, type: 'Task' },
+      { text: "Don't have a garden", valueSaving: 0, valueTotal: 0, task: null, category: categoryIds.GARDEN, type: 'Achievement' }
+    ],
+    trainingText: 'You can save a significant amount of water by using rainwater for your garden, potentially replacing 40-50% of your mains water usage for outdoor and indoor non-potable needs.',
+    content: {
+      message: 'Save water while keeping your garden beautiful.',
+      image: 'rain-barrel.jpg',
+      video: 'https://www.youtube.com/watch?v=tgophFI451Y',
+      additionalInfo: 'Use water-efficient methods for your garden and indoor plants.'
+    }
   }
 ];
 
-export default questions; 
+export default questions;

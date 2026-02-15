@@ -42,6 +42,20 @@ export const categories = {
     icon: Icons.car,
     color: '#4DB6AC',
     description: 'Efficient vehicle cleaning',
+  },
+  Appliances: {
+    id: 'appliances',
+    title: 'Appliances',
+    icon: Icons.appliances,
+    color: '#FF8A65',
+    description: 'Use eco-mode on your appliances',
+  },
+  Garden: {
+    id: 'garden',
+    title: 'Garden & Plants',
+    icon: Icons.garden,
+    color: '#66BB6A',
+    description: 'Water-efficient gardening habits',
   }
 };
 
@@ -52,5 +66,7 @@ export const categoryIds = {
   LAUNDRY: 'laundry',
   PLUMBING: 'plumbing',
   DAILY: 'daily',
-  CAR: 'car'
+  CAR: 'car',
+  APPLIANCES: 'appliances',
+  GARDEN: 'garden'
 }; 

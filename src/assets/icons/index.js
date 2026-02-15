@@ -79,6 +79,27 @@ const carSvg = `
 </svg>
 `;
 
+const appliancesSvg = `
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="6" y="6" width="36" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+  <circle cx="24" cy="24" r="8" stroke="currentColor" stroke-width="2"/>
+  <path d="M24 16V24L28 28" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M14 10H18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="34" cy="10" r="2" fill="currentColor"/>
+  <path d="M6 14H42" stroke="currentColor" stroke-width="2"/>
+</svg>
+`;
+
+const gardenSvg = `
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M24 44V24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M24 24C24 18 18 12 12 12C12 18 18 24 24 24Z" stroke="currentColor" stroke-width="2"/>
+  <path d="M24 28C24 22 30 16 36 16C36 22 30 28 24 28Z" stroke="currentColor" stroke-width="2"/>
+  <path d="M24 20C24 14 20 8 16 4C12 8 8 14 8 20C8 26 16 28 24 20Z" stroke="currentColor" stroke-width="2"/>
+  <path d="M16 44H32" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>
+`;
+
 const createIcon = (svg) => ({ width, height, color }) => (
   <SvgXml 
     xml={svg} 
@@ -95,4 +116,6 @@ export const Icons = {
   plumbing: createIcon(plumbingSvg),
   daily: createIcon(dailySvg),
   car: createIcon(carSvg),
+  appliances: createIcon(appliancesSvg),
+  garden: createIcon(gardenSvg),
 }; 

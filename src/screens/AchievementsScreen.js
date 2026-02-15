@@ -8,8 +8,9 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
-import StorageService from '../services/StorageService';
+import DataService from '../services/DataService';
 import strings from '../localization/strings';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { categories } from '../data/categories';
@@ -45,7 +46,7 @@ export const AchievementsScreen = ({ navigation }) => {
   const loadAchievements = async () => {
     try {
       setIsLoading(true);
-      const savedAchievements = await StorageService.getAchievements();
+      const savedAchievements = await DataService.getAchievements();
       console.log('Loaded achievements:', savedAchievements);
       if (savedAchievements) {
         // Sort by date - newest to oldest
