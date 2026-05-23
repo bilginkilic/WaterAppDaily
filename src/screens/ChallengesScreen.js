@@ -23,11 +23,14 @@ import { questionsByCategory, getCategoryQuestionCount, getCategoryMaxSavings } 
 import { WebView } from 'react-native-webview';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import StorageService from '../services/StorageService';
+import { syncProfileToServer } from '../services/syncService';
 import { NotificationService } from '../services';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { getTutorialVideo, getYoutubeVideoId, getYoutubeEmbedUrl } from '../services/TutorialService';
 import { ProfileScreen } from './ProfileScreen';
 import DataService from '../services/DataService';
+import { useNavigation } from '@react-navigation/native';
+import { TOKEN_EXPIRED } from '../services/apiClient';
 
 const { width } = Dimensions.get('window');
 
@@ -96,6 +99,7 @@ const CategoryCard = ({ category, isActive, hasQuestions, onPress }) => {
 };
 
 const ChallengesContent = ({ tasks, onTasksUpdate }) => {
+  const navigation = useNavigation();
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [videoUrl, setVideoUrl] = useState(null);
@@ -198,21 +202,17 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
           const userData = await DataService.getUserData();
           if (userData?.token) {
             try {
-              await StorageService.updateWaterprint({
-                currentWaterprint: waterFootprint,
-                taskId: currentQuestion.task.questionId,
-                waterprintReduction: selectedOption.valueSaving
-              });
+              await syncProfileToServer();
             } catch (error) {
-              if (error.message === 'TOKEN_EXPIRED') {
+              if (error.message === TOKEN_EXPIRED) {
                 Alert.alert(
                   'Session Expired',
                   'Your session has expired. Please login again to sync your progress.',
                   [
                     {
                       text: 'Login',
-                      onPress: () => navigation.replace('Auth', { screen: 'Login' })
-                    }
+                      onPress: () => navigation.getParent()?.replace('Auth', { screen: 'Login' }),
+                    },
                   ]
                 );
                 return;
@@ -645,6 +645,8 @@ const SegmentControl = ({ selectedSegment, onSegmentChange }) => {
   );
 };
 
+const LAST_SEGMENT_KEY = '@last_main_segment';
+
 export const ChallengesScreen = ({ route, navigation }) => {
   const [selectedSegment, setSelectedSegment] = useState('challenges');
   const [tasks, setTasks] = useState([]);
@@ -658,7 +660,7 @@ export const ChallengesScreen = ({ route, navigation }) => {
       const [tasksData, achievementsData, footprint] = await Promise.all([
         DataService.getTasks(),
         DataService.getAchievements(),
-        DataService.getWaterFootprint()
+        DataService.getCurrentWaterFootprint(),
       ]);
 
       setTasks(tasksData);
@@ -674,7 +676,13 @@ export const ChallengesScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     loadData();
+    DataService.getLastMainSegment().then(setSelectedSegment);
   }, []);
+
+  const handleSegmentChange = (segment) => {
+    setSelectedSegment(segment);
+    DataService.setLastMainSegment(segment);
+  };
 
   const handleTasksUpdate = (newData) => {
     setTasks(newData.tasks);
@@ -713,7 +721,7 @@ export const ChallengesScreen = ({ route, navigation }) => {
       <StatusBar barStyle="dark-content" />
       <SegmentControl
         selectedSegment={selectedSegment}
-        onSegmentChange={setSelectedSegment}
+        onSegmentChange={handleSegmentChange}
       />
       {renderContent()}
     </SafeAreaView>

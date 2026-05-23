@@ -1,0 +1,57 @@
+appId: org.reactjs.native.example.WaterAppDaily
+---
+# Eco-friendly persona — same choices as Jest userFlow tests
+- extendedWaitUntil:
+    visible:
+      id: survey-q1-opt-0
+    timeout: 20000
+- tapOn:
+    id: survey-q1-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q2-opt-1
+    timeout: 10000
+- tapOn:
+    id: survey-q2-opt-1
+- extendedWaitUntil:
+    visible:
+      id: survey-q3-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q3-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q4-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q4-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q5-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q5-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q6-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q6-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q7-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q7-opt-0
+- extendedWaitUntil:
+    visible:
+      id: survey-q8-opt-1
+    timeout: 10000
+- tapOn:
+    id: survey-q8-opt-1
+- extendedWaitUntil:
+    visible:
+      id: survey-q9-opt-0
+    timeout: 10000
+- tapOn:
+    id: survey-q9-opt-0

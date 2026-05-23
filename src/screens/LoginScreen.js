@@ -48,14 +48,14 @@ export const LoginScreen = ({ navigation }) => {
       // After successful login, navigate based on survey status
       console.log('Login successful, survey status:', isSurveyTaken);
       if (isSurveyTaken) {
-        navigation.replace('MainApp', {
+        navigation.getParent()?.replace('MainApp', {
           screen: 'Main',
           params: {
             screen: 'Challenges'
           }
         });
       } else {
-        navigation.replace('MainApp', {
+        navigation.getParent()?.replace('MainApp', {
           screen: 'Intro'
         });
       }
@@ -89,23 +89,28 @@ export const LoginScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder={strings.email}
+            placeholderTextColor="#888888"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            testID="login-email"
           />
           <TextInput
             style={styles.input}
             placeholder={strings.password}
+            placeholderTextColor="#888888"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            testID="login-password"
           />
 
           <TouchableOpacity 
             style={styles.loginButton}
             onPress={handleLogin}
             disabled={isLoading}
+            testID="login-submit"
           >
             {isLoading ? (
               <ActivityIndicator color="#FFF" />
@@ -139,12 +144,12 @@ export const LoginScreen = ({ navigation }) => {
             onPress={async () => {
               try {
                 await startAnonymousSession();
-                // After anonymous session, navigate to Survey directly
-                navigation.replace('Survey');
+                navigation.replace('Survey', { startFresh: true });
               } catch (error) {
                 Alert.alert('Error', 'Failed to start anonymous session');
               }
             }}
+            testID="login-anonymous"
           >
             <Text style={styles.skipButtonText}>Start Calculating Your Water Footprint</Text>
           </TouchableOpacity>
@@ -187,6 +192,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E3F2FD',
     fontSize: 16,
+    color: '#212121',
   },
   loginButton: {
     backgroundColor: '#2196F3',

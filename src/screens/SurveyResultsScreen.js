@@ -15,8 +15,10 @@ import strings from '../localization/strings';
 import { categories } from '../data/categories';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import StorageService from '../services/StorageService';
+import { syncProfileToServer } from '../services/syncService';
 import { useAuth } from '../context/AuthContext';
 import DataService from '../services/DataService';
+import { normalizeSurveyAnswers, countAchievements } from '../utils/surveyAnswers';
 
 const { width } = Dimensions.get('window');
 
@@ -36,9 +38,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   
   // Calculate potential savings from tasks with validation
   const potentialSaving = tasks.reduce((total, task) => {
-    const waterUsage = task.waterUsage || 0;
-    console.log(`Task ${task.id}: waterUsage = ${waterUsage}`);
-    return total + waterUsage;
+    const saving = task.valueSaving || 0;
+    return total + saving;
   }, 0);
 
   // Get improvement areas from tasks and achievements
@@ -149,11 +150,13 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
       // Send data to API only if user is logged in
       if (userData && userData.token) {
         try {
+          const normalizedAnswers = normalizeSurveyAnswers(results.answers);
           await StorageService.createInitialProfile(userData.token, {
             initialWaterprint: initialWaterFootprint,
-            answers: results.answers,
-            correctAnswersCount: results.achievements.length
+            answers: normalizedAnswers,
+            correctAnswersCount: countAchievements(normalizedAnswers),
           });
+          await syncProfileToServer();
         } catch (apiError) {
           console.warn('Failed to sync with API but continuing with local data:', apiError);
           // Don't throw error, just continue with local data
@@ -239,6 +242,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         <TouchableOpacity
           style={styles.startButton}
           onPress={handleStartChallenge}
+          testID="start-challenge"
         >
           <Text style={styles.startButtonText}>Start challenge</Text>
           <MaterialCommunityIcons name="arrow-right" size={24} color="#FFF" style={styles.buttonIcon} />

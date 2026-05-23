@@ -1,0 +1,9 @@
+appId: org.reactjs.native.example.WaterAppDaily
+---
+- runFlow:
+    when:
+      visible:
+        id: intro-skip
+    commands:
+      - tapOn:
+          id: intro-skip

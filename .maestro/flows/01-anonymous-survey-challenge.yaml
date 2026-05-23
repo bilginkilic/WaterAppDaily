@@ -1,0 +1,20 @@
+appId: org.reactjs.native.example.WaterAppDaily
+---
+# Real user: intro → survey (eco answers) → offline challenge
+- launchApp:
+    clearState: true
+- runFlow:
+    file: ../subflows/skip-intro.yaml
+- runFlow:
+    file: ../subflows/survey-eco-path.yaml
+- extendedWaitUntil:
+    visible:
+      id: start-challenge
+    timeout: 20000
+- tapOn:
+    id: start-challenge
+- tapOn: "Continue Offline"
+- extendedWaitUntil:
+    visible: "Your Challenges"
+    timeout: 15000
+- assertVisible: "Your Challenges"

@@ -1,0 +1,50 @@
+appId: org.reactjs.native.example.WaterAppDaily
+---
+# Real user: register → survey → API sync → challenges
+# Note: requires API register + mobile RegisterScreen navigation fix
+- launchApp:
+    clearState: true
+- evalScript: ${output.testEmail = 'maestro-' + Date.now() + '@waterapp.test'}
+- extendedWaitUntil:
+    visible:
+      id: intro-login
+    timeout: 15000
+- tapOn:
+    id: intro-login
+- extendedWaitUntil:
+    visible:
+      id: login-email
+    timeout: 10000
+- tapOn: "Register"
+- extendedWaitUntil:
+    visible:
+      id: register-email
+    timeout: 10000
+- tapOn:
+    id: register-name
+- inputText: Maestro User
+- tapOn:
+    id: register-email
+- eraseText
+- inputText: ${output.testEmail}
+- tapOn:
+    id: register-password
+- inputText: Maestro123!
+- tapOn:
+    id: register-submit
+- extendedWaitUntil:
+    visible:
+      id: survey-q1-opt-0
+    timeout: 45000
+- runFlow:
+    file: ../subflows/survey-eco-path.yaml
+- extendedWaitUntil:
+    visible:
+      id: start-challenge
+    timeout: 20000
+- tapOn:
+    id: start-challenge
+- extendedWaitUntil:
+    visible: "Your Challenges"
+    timeout: 30000
+- assertVisible: "Your Challenges"

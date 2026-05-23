@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-//import StorageService from './StorageService';
-//local storage
+import { computeCurrentFootprint, sumSurveyValueTotals } from '../utils/waterFootprint';
 
 const STORAGE_KEYS = {
   USER_DATA: '@user_data',
@@ -10,7 +9,8 @@ const STORAGE_KEYS = {
   SURVEY_COMPLETED: '@survey_completed',
   WATER_FOOTPRINT: '@water_footprint',
   SURVEY_ANSWERS_INIT: '@survey_answers_init',
-  INTRO_SEEN: '@intro_seen'
+  INTRO_SEEN: '@intro_seen',
+  LAST_MAIN_SEGMENT: '@last_main_segment',
 };
 
 class DataService {
@@ -31,6 +31,25 @@ class DataService {
     } catch (error) {
       console.error('Error getting intro seen status:', error);
       return false;
+    }
+  }
+
+  static async getLastMainSegment() {
+    try {
+      const segment = await AsyncStorage.getItem(STORAGE_KEYS.LAST_MAIN_SEGMENT);
+      return ['challenges', 'achievements', 'profile'].includes(segment)
+        ? segment
+        : 'challenges';
+    } catch (error) {
+      return 'challenges';
+    }
+  }
+
+  static async setLastMainSegment(segment) {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LAST_MAIN_SEGMENT, segment);
+    } catch (error) {
+      console.error('Error saving last main segment:', error);
     }
   }
   
@@ -58,6 +77,10 @@ class DataService {
 
   static async isSurveyCompleted() {
     try {
+      const flag = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_COMPLETED);
+      if (flag === 'true') {
+        return true;
+      }
       const userData = await this.getUserData();
       const completed = userData?.surveyTaken || false;
       console.log('Survey completion status:', completed);
@@ -70,37 +93,74 @@ class DataService {
 
   static async markSurveyCompleted() {
     try {
-      const userData = await this.getUserData();
-      if (userData) {
-        userData.surveyTaken = true;
-        await this.setUserData(userData);
-        console.log('Survey marked as completed');
-      }
+      await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_COMPLETED, 'true');
+      const userData = (await this.getUserData()) || {};
+      userData.surveyTaken = true;
+      await this.setUserData(userData);
+      console.log('Survey marked as completed');
     } catch (error) {
-      console.error('Error marking survey as completed:', error);
+      console.error('Error marking survey completion:', error);
       throw error;
+    }
+  }
+
+  /** Older builds did not persist @survey_completed — infer from saved progress. */
+  static async migrateSurveyCompletionFlag() {
+    try {
+      const flag = await AsyncStorage.getItem(STORAGE_KEYS.SURVEY_COMPLETED);
+      if (flag === 'true') {
+        return true;
+      }
+
+      const [answersInit, tasks, userData] = await Promise.all([
+        this.getSurveyAnswersInit(),
+        this.getTasks(),
+        this.getUserData(),
+      ]);
+
+      const hasProgress =
+        (answersInit?.length ?? 0) > 0 ||
+        (tasks?.length ?? 0) > 0 ||
+        userData?.surveyTaken === true;
+
+      if (hasProgress) {
+        await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_COMPLETED, 'true');
+        if (userData && !userData.surveyTaken) {
+          userData.surveyTaken = true;
+          await this.setUserData(userData);
+        }
+        console.log('Migrated survey completion flag from existing progress');
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error migrating survey completion flag:', error);
+      return false;
     }
   }
 
   static async saveSurveyAnswer(answer) {
     try {
       const answers = await this.getSurveyAnswers() || [];
-      answers.push({
+      const record = {
         ...answer,
-        timestamp: new Date().toISOString()
-      });
+        timestamp: answer.timestamp || new Date().toISOString(),
+      };
+      answers.push(record);
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_ANSWERS, JSON.stringify(answers));
-      console.log('Survey answer saved:', answer);
+      console.log('Survey answer saved:', record);
 
-      // Update tasks or achievements based on answer type
-      if (answer.type === 'Task') {
-        await this.addTask(answer);
-      } else if (answer.type === 'Achievement') {
-        await this.addAchievement(answer);
+      if (record.type === 'Task') {
+        await this.addTask(record);
+      } else if (record.type === 'Achievement') {
+        await this.addAchievement(record);
       }
 
-      // Update water footprint
-      await this.updateWaterFootprint(answer.valueTotal);
+      const initial = await this.InitialWaterFootPrint();
+      const achievements = await this.getAchievements();
+      const current = computeCurrentFootprint(initial, achievements);
+      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, current.toString());
     } catch (error) {
       console.error('Error saving survey answer:', error);
       throw error;
@@ -167,15 +227,15 @@ class DataService {
     }
   }
 
-  static async updateWaterFootprint(value) {
+  static async syncWaterFootprintFromProgress() {
     try {
-      const currentFootprint = await this.getWaterFootprint() || 0;
-      const newFootprint = currentFootprint + value;
-      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, newFootprint.toString());
-      console.log('Water footprint updated:', { current: currentFootprint, new: newFootprint });
-      return newFootprint;
+      const initial = await this.InitialWaterFootPrint();
+      const achievements = await this.getAchievements();
+      const current = computeCurrentFootprint(initial, achievements);
+      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, current.toString());
+      return current;
     } catch (error) {
-      console.error('Error updating water footprint:', error);
+      console.error('Error syncing water footprint:', error);
       throw error;
     }
   }
@@ -192,9 +252,9 @@ class DataService {
 
   static async clearUserData() {
     try {
-      console.log('🚪 Clearing user data...');
+      console.log('🚪 Clearing user auth data (survey progress kept)...');
       await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-      console.log('✅ User data cleared successfully');
+      console.log('✅ User auth data cleared');
     } catch (error) {
       console.error('Error clearing user data:', error);
       throw error;
@@ -222,7 +282,7 @@ class DataService {
         STORAGE_KEYS.ACHIEVEMENTS,
         STORAGE_KEYS.SURVEY_COMPLETED,
         STORAGE_KEYS.WATER_FOOTPRINT,
-        STORAGE_KEYS.SURVEY_ANSWERS_INIT
+        STORAGE_KEYS.SURVEY_ANSWERS_INIT,
       ];
       await AsyncStorage.multiRemove(keysToRemove);
       console.log('Survey data cleared successfully');
@@ -230,6 +290,13 @@ class DataService {
       console.error('Error clearing survey data:', error);
       throw error;
     }
+  }
+
+  /** Fresh local guest session — no login, new survey from scratch. */
+  static async prepareGuestSession() {
+    await this.clearSurveyData();
+    await AsyncStorage.removeItem(STORAGE_KEYS.LAST_MAIN_SEGMENT);
+    console.log('Prepared fresh guest session');
   }
 
   static async calculatePotentialMonthlySaving() {
@@ -305,9 +372,7 @@ class DataService {
   static async InitialWaterFootPrint() {
     try {
       const answers = await this.getSurveyAnswersInit();
-      const totalWaterFootprint = answers.reduce((sum, answer) => {
-        return sum + (answer.valueTotal || 0);
-      }, 0);
+      const totalWaterFootprint = sumSurveyValueTotals(answers);
       console.log('Initial water footprint calculated:', totalWaterFootprint);
       return totalWaterFootprint;
     } catch (error) {
@@ -318,14 +383,9 @@ class DataService {
 
   static async CurrentWaterFootPrint() {
     try {
-      const tasks = await this.getTasks();
+      const initial = await this.InitialWaterFootPrint();
       const achievements = await this.getAchievements();
-      const allItems = [...tasks, ...achievements];
-      
-      const currentWaterFootprint = allItems.reduce((sum, item) => {
-        return sum + (item.valueTotal || 0);
-      }, 0);
-      
+      const currentWaterFootprint = computeCurrentFootprint(initial, achievements);
       console.log('Current water footprint calculated:', currentWaterFootprint);
       return currentWaterFootprint;
     } catch (error) {
@@ -335,7 +395,7 @@ class DataService {
   }
 
   static async getCurrentWaterFootprint() {
-    return this.CurrentWaterFootPrint(); // Alias for consistent naming
+    return this.CurrentWaterFootPrint();
   }
 
   static async saveTasks(tasks) {
@@ -372,10 +432,12 @@ class DataService {
       const newAchievement = {
         ...task,
         type: 'Achievement',
-        timestamp: new Date().toISOString()
+        earnedViaChallenge: true,
+        timestamp: new Date().toISOString(),
       };
       achievements.push(newAchievement);
-      await  this.saveAchievements(achievements);
+      await this.saveAchievements(achievements);
+      await this.syncWaterFootprintFromProgress();
 
       console.log('Task converted to achievement:', newAchievement);
       console.log('Updated achievements:', achievements);

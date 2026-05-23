@@ -12,7 +12,7 @@ import strings from '../localization/strings';
 import questions from '../data/questions';
 import DataService from '../services/DataService';
 
-export const SurveyScreen = ({ navigation }) => {
+export const SurveyScreen = ({ navigation, route = {} }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [surveyResults, setSurveyResults] = useState({
     totalWaterFootprint: 0,
@@ -31,8 +31,9 @@ export const SurveyScreen = ({ navigation }) => {
       valueTotal: option.valueTotal || 0,
       type: option.type,
       valueSaving: option.valueSaving || 0,
+      task: option.task || null,
       timestamp: new Date().toISOString(),
-      category: currentQ.category
+      category: currentQ.category,
     };
 
     console.log('Processing Answer:', {
@@ -105,7 +106,7 @@ export const SurveyScreen = ({ navigation }) => {
         potentialMonthlySaving
       });
 
-      // Mark survey as completed first
+      await DataService.syncWaterFootprintFromProgress();
       await DataService.markSurveyCompleted();
 
       // Navigate to results screen with all data
@@ -126,26 +127,39 @@ export const SurveyScreen = ({ navigation }) => {
 
   useEffect(() => {
     const initializeSurvey = async () => {
-      // Clear only survey-related data
+      const completed = await DataService.isSurveyCompleted();
+      if (completed) {
+        const parent = navigation.getParent();
+        if (parent) {
+          navigation.replace('TabNavigator');
+        } else {
+          navigation.replace('MainApp', { screen: 'TabNavigator' });
+        }
+        return;
+      }
+
+      const startFresh = route.params?.startFresh === true;
+      const existingAnswers = await DataService.getSurveyAnswersInit();
+
+      if (!startFresh && existingAnswers?.length > 0) {
+        console.log('Resuming in-progress survey');
+        return;
+      }
+
       await DataService.clearSurveyData();
-      
-      // Reset all state
+
       setCurrentQuestion(0);
       setSurveyResults({
         totalWaterFootprint: 0,
         tasks: [],
-        achievements: []
+        achievements: [],
       });
 
       console.log('\n=== STARTING NEW SURVEY ===');
-      console.log('Initial Water Footprint:', 0, 'L');
-      console.log('Initial Tasks:', 0);
-      console.log('Initial Achievements:', 0);
-      console.log('===========================\n');
     };
 
     initializeSurvey();
-  }, []); // Run only once when component mounts
+  }, [navigation, route?.params?.startFresh]);
 
   const currentQ = questions[currentQuestion];
   if (!currentQ || !currentQ.text) {
@@ -183,6 +197,7 @@ export const SurveyScreen = ({ navigation }) => {
               key={index}
               style={styles.optionButton}
               onPress={() => handleAnswer(option)}
+              testID={`survey-q${currentQ.id}-opt-${index}`}
             >
               <Text style={styles.optionText}>{option.text}</Text>
             </TouchableOpacity>

@@ -14,6 +14,7 @@ import strings from '../localization/strings';
 import DataService from '../services/DataService';
 import { useAuth } from '../context/AuthContext';
 import StorageService from '../services/StorageService';
+import { syncProfileToServer } from '../services/syncService';
 
 export const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -38,6 +39,16 @@ export const ProfileScreen = () => {
         setInitialWaterFootprint(initialFootprint);
         setTasks(tasksData);
         setAchievements(achievementsData);
+
+        if (token) {
+          await syncProfileToServer();
+          const [refreshedCurrent, refreshedInitial] = await Promise.all([
+            DataService.getCurrentWaterFootprint(),
+            DataService.InitialWaterFootPrint(),
+          ]);
+          setWaterFootprint(refreshedCurrent);
+          setInitialWaterFootprint(refreshedInitial);
+        }
       } catch (error) {
         console.error('Error loading profile data:', error);
       } finally {
@@ -46,7 +57,7 @@ export const ProfileScreen = () => {
     };
 
     loadData();
-  }, []);
+  }, [token]);
 
   if (isLoading) {
     return (
@@ -60,13 +71,12 @@ export const ProfileScreen = () => {
 
   const handleSignOut = async () => {
     try {
-      if (navigation) {
-        // Navigate first
-        navigation.replace('Auth', { screen: 'Login' });
-        // Then clear data
-        await authSignOut();
-        await DataService.clearUserData();
-      }
+      await authSignOut();
+      const rootNav = navigation.getParent()?.getParent() ?? navigation.getParent() ?? navigation;
+      rootNav.reset({
+        index: 0,
+        routes: [{ name: 'Auth', params: { screen: 'Login' } }],
+      });
     } catch (error) {
       console.error('Error signing out:', error);
       Alert.alert('Error', 'Failed to sign out. Please try again.');
@@ -88,12 +98,20 @@ export const ProfileScreen = () => {
           onPress: async () => {
             try {
               const userData = await DataService.getUserData();
-              if (userData?.userId && navigation) {
-                navigation.replace('Auth', { screen: 'Login' });
-                await StorageService.deleteAccount(userData.userId);
-                await DataService.clearUserData();
-                await authSignOut();
+              if (!userData?.userId || !userData?.token) {
+                Alert.alert('Error', 'You must be logged in to delete your account.');
+                return;
               }
+
+              await StorageService.deleteAccount(userData.userId);
+              await DataService.clearAllData();
+              await authSignOut();
+
+              const rootNav = navigation.getParent()?.getParent() ?? navigation.getParent() ?? navigation;
+              rootNav.reset({
+                index: 0,
+                routes: [{ name: 'Auth', params: { screen: 'Login' } }],
+              });
             } catch (error) {
               console.error('Error deleting account:', error);
               Alert.alert('Error', 'Failed to delete account. Please try again.');

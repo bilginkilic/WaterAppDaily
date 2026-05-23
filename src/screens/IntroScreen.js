@@ -69,13 +69,13 @@ export const IntroScreen = ({ navigation }) => {
       setCurrentSlideIndex(currentSlideIndex + 1);
     } else {
       await markIntroAsSeen();
-      navigation.replace('Survey');
+      navigation.replace('Survey', { startFresh: true });
     }
   };
 
   const handleSkip = async () => {
     await markIntroAsSeen();
-    navigation.replace('Survey');
+    navigation.replace('Survey', { startFresh: true });
   };
 
   const renderPaginationDots = () => {
@@ -120,6 +120,7 @@ export const IntroScreen = ({ navigation }) => {
         <TouchableOpacity
           style={styles.skipButton}
           onPress={handleSkip}
+          testID="intro-skip"
         >
           <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
@@ -139,6 +140,13 @@ export const IntroScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
       </View>
+      <TouchableOpacity
+        style={styles.loginLink}
+        onPress={() => navigation.navigate('Auth', { screen: 'Login' })}
+        testID="intro-login"
+      >
+        <Text style={styles.loginLinkText}>Already have an account? Log in</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -223,5 +231,13 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginLeft: 4,
+  },
+  loginLink: {
+    alignItems: 'center',
+    paddingBottom: 16,
+  },
+  loginLinkText: {
+    fontSize: 14,
+    color: '#2196F3',
   },
 }); 

@@ -38,17 +38,13 @@ export const RegisterScreen = ({ navigation }) => {
       const response = await StorageService.register(email, password, name);
       console.log('Registration response:', response);
 
-      // Automatically log in after successful registration
-      const loginResponse = await StorageService.login(email, password);
-
-      // Set auth context
-      await signIn(loginResponse.token, {
-        id: loginResponse.userId,
+      await signIn(response.token, {
+        id: response.userId,
         email: email,
-        name: name
+        name: name,
       });
 
-      // After successful registration and login, AppStack will automatically show Intro screen
+      navigation.replace('Survey');
     } catch (error) {
       console.error('Registration error:', error);
       if (error.message.includes('already exists')) {
@@ -77,30 +73,37 @@ export const RegisterScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             placeholder={strings.name}
+            placeholderTextColor="#888888"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
+            testID="register-name"
           />
           <TextInput
             style={styles.input}
             placeholder={strings.email}
+            placeholderTextColor="#888888"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+            testID="register-email"
           />
           <TextInput
             style={styles.input}
             placeholder={strings.password}
+            placeholderTextColor="#888888"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            testID="register-password"
           />
 
           <TouchableOpacity 
             style={styles.registerButton}
             onPress={handleRegister}
             disabled={isLoading}
+            testID="register-submit"
           >
             {isLoading ? (
               <ActivityIndicator color="#FFF" />
@@ -154,6 +157,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E3F2FD',
     fontSize: 16,
+    color: '#212121',
   },
   registerButton: {
     backgroundColor: '#2196F3',
