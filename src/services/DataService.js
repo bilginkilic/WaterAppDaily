@@ -11,6 +11,8 @@ const STORAGE_KEYS = {
   SURVEY_ANSWERS_INIT: '@survey_answers_init',
   INTRO_SEEN: '@intro_seen',
   LAST_MAIN_SEGMENT: '@last_main_segment',
+  // userId of the account the local survey/progress data belongs to
+  DATA_OWNER: '@data_owner',
 };
 
 class DataService {
@@ -292,10 +294,43 @@ class DataService {
     }
   }
 
+  static async getDataOwner() {
+    return AsyncStorage.getItem(STORAGE_KEYS.DATA_OWNER);
+  }
+
+  static async setDataOwner(userId) {
+    await AsyncStorage.setItem(STORAGE_KEYS.DATA_OWNER, String(userId));
+  }
+
+  /**
+   * Bind local survey/progress data to the account that is signing in.
+   * If the data belongs to a different account (shared device), clear it so it is
+   * neither shown to nor synced into the new account. Unowned data (guest session
+   * or pre-ownership builds) is adopted by the signing-in account.
+   * @returns {Promise<boolean>} true when another account's data was cleared
+   */
+  static async claimLocalDataFor(userId) {
+    if (!userId) return false;
+    const owner = await this.getDataOwner();
+    let cleared = false;
+    if (owner && owner !== String(userId)) {
+      console.log('🔄 Different account on this device — clearing previous challenge data');
+      await this.clearSurveyData();
+      await AsyncStorage.removeItem(STORAGE_KEYS.LAST_MAIN_SEGMENT);
+      const userData = await this.getUserData();
+      if (userData?.surveyTaken) {
+        await this.setUserData({ ...userData, surveyTaken: false });
+      }
+      cleared = true;
+    }
+    await this.setDataOwner(userId);
+    return cleared;
+  }
+
   /** Fresh local guest session — no login, new survey from scratch. */
   static async prepareGuestSession() {
     await this.clearSurveyData();
-    await AsyncStorage.removeItem(STORAGE_KEYS.LAST_MAIN_SEGMENT);
+    await AsyncStorage.multiRemove([STORAGE_KEYS.LAST_MAIN_SEGMENT, STORAGE_KEYS.DATA_OWNER]);
     console.log('Prepared fresh guest session');
   }
 

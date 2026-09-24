@@ -72,6 +72,10 @@ export const AuthProvider = ({ children }) => {
 
       if (effectiveToken && (userId || storedUserData?.userId)) {
         const uid = userId || storedUserData.userId;
+        // Builds before data ownership: bind existing local data to the signed-in account.
+        if (!(await DataService.getDataOwner())) {
+          await DataService.setDataOwner(uid);
+        }
         const isValid = await validateToken(effectiveToken);
         if (!isValid) {
           await handleSessionExpired();
@@ -114,6 +118,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid login credentials');
       }
 
+      await DataService.claimLocalDataFor(user.id);
       await persistAuthSession(token, user);
       setUserToken(token);
       setUserData({

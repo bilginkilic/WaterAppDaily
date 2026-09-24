@@ -10,6 +10,9 @@ class StorageService {
         body: { email, password },
       });
 
+      // Drop another account's local challenge data before reusing any of it.
+      await DataService.claimLocalDataFor(data.userId);
+
       const existing = (await DataService.getUserData()) || {};
       const surveyTaken =
         existing.surveyTaken || (await DataService.isSurveyCompleted());
