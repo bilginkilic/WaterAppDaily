@@ -36,12 +36,6 @@ jest.mock('../src/services/StorageService', () => ({
   },
 }));
 
-jest.mock('../src/services', () => ({
-  NotificationService: {
-    requestPermissions: jest.fn(),
-    scheduleNotification: jest.fn(),
-  },
-}));
 
 describe('User flow: Survey → Results → Challenge task', () => {
   const mockReplace = jest.fn();

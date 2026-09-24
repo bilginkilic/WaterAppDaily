@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { computeCurrentFootprint, sumSurveyValueTotals } from '../utils/waterFootprint';
+import { computeCurrentFootprint, computePotentialSaving, sumSurveyValueTotals } from '../utils/waterFootprint';
+import questions from '../data/questions';
 
 const STORAGE_KEYS = {
   USER_DATA: '@user_data',
@@ -144,12 +145,19 @@ class DataService {
 
   static async saveSurveyAnswer(answer) {
     try {
-      const answers = await this.getSurveyAnswers() || [];
+      // One answer per question: re-answering (resume, double tap) replaces the
+      // earlier answer instead of counting the question twice.
+      const answers = (await this.getSurveyAnswers() || [])
+        .filter((a) => a.questionId !== answer.questionId);
       const record = {
         ...answer,
         timestamp: answer.timestamp || new Date().toISOString(),
       };
       answers.push(record);
+      const tasks = (await this.getTasks()).filter((t) => t.questionId !== answer.questionId);
+      const achievements = (await this.getAchievements()).filter((a) => a.questionId !== answer.questionId);
+      await this.saveTasks(tasks);
+      await this.saveAchievements(achievements);
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEY_ANSWERS, JSON.stringify(answers));
       console.log('Survey answer saved:', record);
 
@@ -159,10 +167,7 @@ class DataService {
         await this.addAchievement(record);
       }
 
-      const initial = await this.InitialWaterFootPrint();
-      const achievements = await this.getAchievements();
-      const current = computeCurrentFootprint(initial, achievements);
-      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, current.toString());
+      await this.syncWaterFootprintFromProgress();
     } catch (error) {
       console.error('Error saving survey answer:', error);
       throw error;
@@ -334,54 +339,21 @@ class DataService {
     console.log('Prepared fresh guest session');
   }
 
+  /** Kept for existing callers; see computePotentialSaving for the rule. */
   static async calculatePotentialMonthlySaving() {
     try {
       const tasks = await this.getTasks();
-      console.log('Tasks for saving calculation:', tasks);
-
-      if (!tasks || tasks.length === 0) {
-        console.log('No tasks found for saving calculation');
-        return 0;
-      }
-
-      const totalSaving = tasks.reduce((sum, task) => {
-        const saving = task.valueTotal || 0;
-        console.log(`Task ${task.id}: valueSaving = ${saving}`);
-        return sum + saving;
-      }, 0);
-
-      console.log('Total potential monthly saving:', totalSaving);
-      return totalSaving;
+      return computePotentialSaving(tasks, questions);
     } catch (error) {
-      console.error('Error calculating potential monthly saving:', error);
+      console.error('Error calculating potential saving:', error);
       return 0;
-    }
-  }
-
-  static async createInitialProfile(data) {
-    try {
-      const userData = await this.getUserData();
-      if (!userData || !userData.token) {
-        throw new Error('User not authenticated');
-      }
-
-      // Call the API service
-      //const response = await StorageService.createInitialProfile(userData.token, data);
-      const response = true;
-      // Save the initial water footprint locally
-      await AsyncStorage.setItem(STORAGE_KEYS.WATER_FOOTPRINT, data.initialWaterprint.toString());
-      
-      console.log('Initial profile created:', response);
-      return response;
-    } catch (error) {
-      console.error('Error creating initial profile:', error);
-      throw error;
     }
   }
 
   static async saveSurveyAnswersInit(answer) {
     try {
-      const answers = await this.getSurveyAnswersInit() || [];
+      const answers = (await this.getSurveyAnswersInit() || [])
+        .filter((a) => a.questionId !== answer.questionId);
       answers.push({
         ...answer,
         timestamp: new Date().toISOString()
@@ -479,23 +451,6 @@ class DataService {
       return achievements;
     } catch (error) {
       console.error('Error converting task to achievement:', error);
-      throw error;
-    }
-  }
-
-  static async TakeChallenge() {
-    try {
-      const tasks = await this.getTasks();
-      const achievements = await this.getAchievements();
-      const waterFootprint = await this.CurrentWaterFootPrint();
-      
-      return {
-        tasks,
-        achievements,
-        waterFootprint
-      };
-    } catch (error) {
-      console.error('Error taking challenge:', error);
       throw error;
     }
   }

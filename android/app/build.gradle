@@ -79,11 +79,13 @@ android {
 
     namespace "com.waterappdaily"
     defaultConfig {
-        applicationId "com.waterappdaily"
+        // Play Console listing is com.waterappdaily2 (see CLAUDE.md); the Kotlin
+        // namespace stays com.waterappdaily so no sources need to move.
+        applicationId "com.waterappdaily2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 7
+        versionName "1.4.1"
     }
     signingConfigs {
         debug {
@@ -93,10 +95,14 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('waterapp-release.keystore')
-            storePassword 'waterapp123'
-            keyAlias 'waterapp-alias'
-            keyPassword 'waterapp123'
+            // Keystore details come from the environment so no secrets live in git.
+            def storePath = System.getenv("WATERAPP2_STORE_FILE")
+            if (storePath) {
+                storeFile file(storePath)
+                storePassword System.getenv("WATERAPP2_STORE_PASSWORD")
+                keyAlias System.getenv("WATERAPP2_KEY_ALIAS")
+                keyPassword System.getenv("WATERAPP2_KEY_PASSWORD")
+            }
         }
     }
     buildTypes {

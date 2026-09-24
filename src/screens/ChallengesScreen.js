@@ -12,7 +12,6 @@ import {
   StatusBar,
   Alert,
   Linking,
-  AsyncStorage,
   ActivityIndicator,
   Clipboard,
 } from 'react-native';
@@ -230,16 +229,17 @@ const ChallengesContent = ({ tasks, onTasksUpdate }) => {
         } catch (error) {
           console.error('Error in task update:', error);
 
-          // Only attempt rollback if user is logged in and API sync failed
-          const userData = await DataService.getUserData();
-          if (userData?.token && localUpdateSuccessful && originalData) {
+          // The local change is saved first and the server sync is best-effort
+          // (the next sync sends the full state again), so only a failure after
+          // the local update needs undoing, and the footprint must be restored too.
+          if (localUpdateSuccessful && originalData) {
             try {
-              // Restore original data
               await DataService.saveTasks(originalData.tasks);
               await DataService.saveAchievements(originalData.achievements);
+              await DataService.syncWaterFootprintFromProgress();
               Alert.alert(
                 'Error',
-                'Failed to sync with server. Changes have been reverted.',
+                'Could not save this challenge. Your previous progress has been restored.',
                 [{ text: 'OK' }]
               );
             } catch (rollbackError) {

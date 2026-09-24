@@ -12,6 +12,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import strings from '../localization/strings';
 import DataService from '../services/DataService';
+import questions from '../data/questions';
+import { computePotentialSaving } from '../utils/waterFootprint';
 import { useAuth } from '../context/AuthContext';
 import StorageService from '../services/StorageService';
 import { syncProfileToServer } from '../services/syncService';
@@ -67,7 +69,7 @@ export const ProfileScreen = () => {
     );
   }
 
-  const totalPotentialSaving = tasks.reduce((total, task) => total + (task.valueSaving || 0), 0);
+  const totalPotentialSaving = computePotentialSaving(tasks, questions);
 
   const handleSignOut = async () => {
     try {
@@ -131,7 +133,7 @@ export const ProfileScreen = () => {
             <Text style={styles.waterFootprint}>{waterFootprint}L</Text>
             
             <View style={styles.savingContainer}>
-              <Text style={styles.savingTitle}>Potential Monthly Saving</Text>
+              <Text style={styles.savingTitle}>Potential Saving</Text>
               <Text style={styles.savingAmount}>{totalPotentialSaving}L</Text>
               <Text style={styles.savingNote}>Based on your current tasks</Text>
             </View>

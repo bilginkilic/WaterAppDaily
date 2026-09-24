@@ -3,6 +3,8 @@
  * Requires local API at http://localhost:3001/api
  */
 const API_BASE = process.env.API_URL || 'http://localhost:3001/api';
+// Needs a running API: set API_URL (e.g. the dashboard repo's `npm run api:e2e`).
+const describeLive = process.env.API_URL ? describe : describe.skip;
 
 async function api(path, { method = 'GET', token, body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -16,7 +18,7 @@ async function api(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, data };
 }
 
-describe('Mobile API integration flow', () => {
+describeLive('Mobile API integration flow', () => {
   const runId = `mob-${Date.now()}`;
   let token;
   let userId;

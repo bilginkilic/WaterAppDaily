@@ -22,3 +22,26 @@ jest.mock('react-native-localization', () => {
     setLanguage() {}
   };
 });
+
+jest.mock('react-native-push-notification', () => {
+  const api = {
+    configure: jest.fn(),
+    createChannel: jest.fn(),
+    localNotification: jest.fn(),
+    localNotificationSchedule: jest.fn(),
+    cancelAllLocalNotifications: jest.fn(),
+    cancelLocalNotification: jest.fn(),
+    requestPermissions: jest.fn(() => Promise.resolve({})),
+    checkPermissions: jest.fn(),
+  };
+  return {
+    __esModule: true,
+    default: api,
+    Importance: { DEFAULT: 3, HIGH: 4, LOW: 2, MIN: 1, NONE: 0, UNSPECIFIED: -1000 },
+  };
+});
+
+jest.mock('@react-native-community/push-notification-ios', () => ({
+  addEventListener: jest.fn(),
+  requestPermissions: jest.fn(() => Promise.resolve({})),
+}));

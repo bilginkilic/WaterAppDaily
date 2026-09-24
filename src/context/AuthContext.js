@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
           });
           setIsAnonymous(false);
           setSessionExpired(false);
-          syncProfileToServer().catch(() => {});
+          syncProfileToServer().catch((error) => console.warn('Background profile sync failed:', error?.message));
         }
       } else if (anonymousFlag === 'true') {
         setIsAnonymous(true);
@@ -128,7 +128,7 @@ export const AuthProvider = ({ children }) => {
       });
       setSessionExpired(false);
       setIsAnonymous(false);
-      syncProfileToServer().catch(() => {});
+      syncProfileToServer().catch((error) => console.warn('Background profile sync failed:', error?.message));
       return true;
     } catch (error) {
       console.error('❌ Sign in error:', error);

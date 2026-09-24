@@ -1,7 +1,12 @@
+import { Platform } from 'react-native';
+
+// The Android emulator reaches the host machine at 10.0.2.2, not localhost.
+const DEV_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+
 const API_URL =
   process.env.API_URL ||
   (typeof __DEV__ !== 'undefined' && __DEV__
-    ? 'http://localhost:3001/api'
+    ? `http://${DEV_HOST}:3001/api`
     : 'https://waterappdashboard2.onrender.com/api');
 
 export const TOKEN_EXPIRED = 'TOKEN_EXPIRED';
