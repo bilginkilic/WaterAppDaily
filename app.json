@@ -4,7 +4,7 @@
   "expo": {
     "name": "WaterAppDaily",
     "slug": "water-app-daily",
-    "version": "1.0.0",
+    "version": "1.4.1",
     "orientation": "portrait",
     "icon": "./src/assets/icon.png",
     "splash": {
@@ -27,7 +27,8 @@
         "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.waterapp.daily"
+      "package": "com.waterappdaily2",
+      "versionCode": 7
     }
   }
 }

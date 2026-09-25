@@ -13,7 +13,12 @@
     "test:maestro:anonymous": "maestro test .maestro/flows/01-anonymous-survey-challenge.yaml",
     "test:maestro:login": "maestro test -e TEST_EMAIL=maestro-$(date +%s)@waterapp.test .maestro/flows/02-login-survey-sync.yaml",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:smoke": "jest __tests__/smoke.test.js",
+    "test:integrity": "jest __tests__/integrity.questions.test.js",
+    "test:e2e": "jest __tests__/e2e.flow.test.js __tests__/userFlow",
+    "test:live": "API_URL=${API_URL:-http://localhost:3001/api} jest __tests__/apiIntegration.test.js __tests__/userFlow.api.test.js",
+    "android:dev": "node scripts/build-android-dev.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.21.0",

@@ -12,6 +12,8 @@ import { runSurveyAsUser } from './helpers/runSurveyAsUser';
 import { USER_PATHS, computeExpectedFromPath } from './helpers/surveyUserPaths';
 
 const API_BASE = process.env.API_URL || 'http://localhost:3001/api';
+// Needs a running API: set API_URL (e.g. the dashboard repo's `npm run api:e2e`).
+const describeLive = process.env.API_URL ? describe : describe.skip;
 
 async function api(path, { method = 'GET', token, body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -25,7 +27,7 @@ async function api(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, data };
 }
 
-describe('User flow: survey UI → API sync (real user path)', () => {
+describeLive('User flow: survey UI → API sync (real user path)', () => {
   const runId = `user-${Date.now()}`;
   let token;
   let userId;

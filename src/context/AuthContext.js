@@ -72,6 +72,10 @@ export const AuthProvider = ({ children }) => {
 
       if (effectiveToken && (userId || storedUserData?.userId)) {
         const uid = userId || storedUserData.userId;
+        // Builds before data ownership: bind existing local data to the signed-in account.
+        if (!(await DataService.getDataOwner())) {
+          await DataService.setDataOwner(uid);
+        }
         const isValid = await validateToken(effectiveToken);
         if (!isValid) {
           await handleSessionExpired();
@@ -89,7 +93,7 @@ export const AuthProvider = ({ children }) => {
           });
           setIsAnonymous(false);
           setSessionExpired(false);
-          syncProfileToServer().catch(() => {});
+          syncProfileToServer().catch((error) => console.warn('Background profile sync failed:', error?.message));
         }
       } else if (anonymousFlag === 'true') {
         setIsAnonymous(true);
@@ -114,6 +118,7 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid login credentials');
       }
 
+      await DataService.claimLocalDataFor(user.id);
       await persistAuthSession(token, user);
       setUserToken(token);
       setUserData({
@@ -123,7 +128,7 @@ export const AuthProvider = ({ children }) => {
       });
       setSessionExpired(false);
       setIsAnonymous(false);
-      syncProfileToServer().catch(() => {});
+      syncProfileToServer().catch((error) => console.warn('Background profile sync failed:', error?.message));
       return true;
     } catch (error) {
       console.error('❌ Sign in error:', error);

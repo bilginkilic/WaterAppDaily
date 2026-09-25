@@ -6,7 +6,7 @@ import { sumSurveyValueTotals } from '../../src/utils/waterFootprint';
  * Mirrors tapping buttons on SurveyScreen.
  */
 export const USER_PATHS = {
-  /** Eco-conscious: mostly Achievement answers, skips car wash (no vehicle). */
+  /** Eco-conscious: mostly Achievement answers. */
   ecoFriendly: [
     'Yes',           // Q1 dishwasher
     'No',            // Q2 no pre-rinse
@@ -15,8 +15,9 @@ export const USER_PATHS = {
     'Under 5 mins',  // Q5 short shower
     'Full',          // Q6 full laundry
     'Yes',           // Q7 turn off tap
-    'No',            // Q8 no leaks
-    'No',            // Q9 no vehicle → survey ends
+    'Yes',           // Q8 eco-mode
+    "Don't have a car",                  // Q9
+    "Don't have a garden",               // Q10
   ],
   /** Mixed habits: creates several Task items for challenge screen. */
   needsImprovement: [
@@ -24,11 +25,12 @@ export const USER_PATHS = {
     'Yes',           // Q2 pre-rinse → Task
     'Half full',     // Q3 → Task
     'No',            // Q4 no aerators → Task
-    '5 - 10 mins',   // Q5 → Task
+    '11 - 15 mins',  // Q5 → Task
     'Half full',     // Q6 → Task
     'No',            // Q7 → Task
-    'Yes',           // Q8 leaks → Task
-    'No',            // Q9 no vehicle
+    'No',            // Q8 no eco-mode → Task
+    'Yourself',      // Q9 hand car wash → Task
+    'No',            // Q10 no rain water → Task
   ],
 };
 

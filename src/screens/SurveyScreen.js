@@ -14,6 +14,8 @@ import DataService from '../services/DataService';
 
 export const SurveyScreen = ({ navigation, route = {} }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  // Guards against a double tap saving the same question twice.
+  const [isSaving, setIsSaving] = useState(false);
   const [surveyResults, setSurveyResults] = useState({
     totalWaterFootprint: 0,
     tasks: [],
@@ -21,6 +23,8 @@ export const SurveyScreen = ({ navigation, route = {} }) => {
   });
 
   const handleAnswer = async (option) => {
+    if (isSaving) return;
+    setIsSaving(true);
     console.log('\n=== PROCESSING NEW ANSWER ===');
     const currentQ = questions[currentQuestion];
     
@@ -74,17 +78,15 @@ export const SurveyScreen = ({ navigation, route = {} }) => {
 
       // Handle navigation logic
       if (currentQuestion + 1 < questions.length) {
-        if (currentQ.id === 9 && option.text === 'No') {
-          handleSurveyComplete();
-        } else {
-          setCurrentQuestion(prev => prev + 1);
-        }
+        setCurrentQuestion(prev => prev + 1);
       } else {
-        handleSurveyComplete();
+        await handleSurveyComplete();
       }
     } catch (error) {
       console.error('Error processing answer:', error);
       Alert.alert('Error', 'Failed to save your answer. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -142,7 +144,15 @@ export const SurveyScreen = ({ navigation, route = {} }) => {
       const existingAnswers = await DataService.getSurveyAnswersInit();
 
       if (!startFresh && existingAnswers?.length > 0) {
-        console.log('Resuming in-progress survey');
+        // Continue from the first question the user has not answered yet.
+        const answered = new Set(existingAnswers.map((a) => a.questionId));
+        const next = questions.findIndex((q) => !answered.has(q.id));
+        if (next === -1) {
+          await handleSurveyComplete();
+        } else {
+          setCurrentQuestion(next);
+        }
+        console.log('Resuming in-progress survey at question', next + 1);
         return;
       }
 
@@ -197,6 +207,7 @@ export const SurveyScreen = ({ navigation, route = {} }) => {
               key={index}
               style={styles.optionButton}
               onPress={() => handleAnswer(option)}
+              disabled={isSaving}
               testID={`survey-q${currentQ.id}-opt-${index}`}
             >
               <Text style={styles.optionText}>{option.text}</Text>

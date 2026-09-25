@@ -15,10 +15,9 @@ export async function runSurveyAsUser(screen, path) {
 
     fireEvent.press(screen.getByText(choice));
 
-    const isEarlyExit = question.id === 9 && choice === 'No';
     const isLastQuestion = i === path.length - 1;
 
-    if (!isEarlyExit && !isLastQuestion) {
+    if (!isLastQuestion) {
       await waitFor(() => {
         expect(screen.getByText(questions[i + 1].text)).toBeTruthy();
       });

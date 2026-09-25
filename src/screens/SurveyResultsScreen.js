@@ -19,6 +19,9 @@ import { syncProfileToServer } from '../services/syncService';
 import { useAuth } from '../context/AuthContext';
 import DataService from '../services/DataService';
 import { normalizeSurveyAnswers, countAchievements } from '../utils/surveyAnswers';
+import { computePotentialSaving } from '../utils/waterFootprint';
+import questions from '../data/questions';
+import { TOKEN_EXPIRED } from '../services/apiClient';
 
 const { width } = Dimensions.get('window');
 
@@ -36,11 +39,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   const tasks = results?.tasks || [];
   const achievements = results?.achievements || [];
   
-  // Calculate potential savings from tasks with validation
-  const potentialSaving = tasks.reduce((total, task) => {
-    const saving = task.valueSaving || 0;
-    return total + saving;
-  }, 0);
+  const potentialSaving = computePotentialSaving(tasks, questions);
 
   // Get improvement areas from tasks and achievements
   const allItems = [...tasks, ...achievements];
@@ -93,6 +92,22 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
       // Get user data including token
       const userData = await DataService.getUserData();
       
+      // Use the total water footprint from survey results
+      const initialWaterFootprint = results.totalWaterFootprint;
+      console.log('Initial water footprint:', initialWaterFootprint);
+
+      // Create water profile object with correct values
+      const waterProfileData = {
+        initialWaterprint: initialWaterFootprint,
+        currentWaterprint: initialWaterFootprint,
+        waterprintReduction: 0,
+        previousUsage: initialWaterFootprint,
+        additionalUsage: 0,
+        lastUpdated: new Date().toISOString(),
+        tasks: results.tasks,
+        achievements: results.achievements
+      };
+
       // Check if user is logged in
       if (!userData || !userData.email) {
         // If not logged in, show login prompt
@@ -128,22 +143,6 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         return;
       }
 
-      // Use the total water footprint from survey results
-      const initialWaterFootprint = results.totalWaterFootprint;
-      console.log('Initial water footprint:', initialWaterFootprint);
-
-      // Create water profile object with correct values
-      const waterProfileData = {
-        initialWaterprint: initialWaterFootprint,
-        currentWaterprint: initialWaterFootprint,
-        waterprintReduction: 0,
-        previousUsage: initialWaterFootprint,
-        additionalUsage: 0,
-        lastUpdated: new Date().toISOString(),
-        tasks: results.tasks,
-        achievements: results.achievements
-      };
-
       console.log('Starting challenge for user:', userData.email);
       console.log('Saving water profile:', waterProfileData);
 
@@ -158,6 +157,9 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
           });
           await syncProfileToServer();
         } catch (apiError) {
+          if (apiError?.message === TOKEN_EXPIRED) {
+            throw apiError;
+          }
           console.warn('Failed to sync with API but continuing with local data:', apiError);
           // Don't throw error, just continue with local data
         }
@@ -184,13 +186,20 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
       });
     } catch (error) {
       console.error('Error starting challenge:', error);
+      // Only an expired/missing session needs the login screen; other errors
+      // (e.g. storage failures) should let the user retry where they are.
+      const needsLogin = error?.message === TOKEN_EXPIRED;
       Alert.alert(
         'Error',
-        'Could not start the challenge. Please try again.',
+        needsLogin
+          ? 'Your session has expired. Please log in again.'
+          : 'Could not start the challenge. Please try again.',
         [
           {
             text: 'OK',
-            onPress: () => navigation.replace('Auth', { screen: 'Login' })
+            onPress: needsLogin
+              ? () => navigation.replace('Auth', { screen: 'Login' })
+              : undefined,
           }
         ]
       );
@@ -210,7 +219,7 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
   };
 
   const renderResults = () => {
-    const { totalWaterFootprint, tasks, achievements, potentialMonthlySaving } = route.params.results;
+    const { totalWaterFootprint, tasks, achievements } = route.params.results;
 
     return (
       <View style={styles.resultsContainer}>
@@ -221,8 +230,8 @@ export const SurveyResultsScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Potential Monthly Savings</Text>
-          <Text style={styles.savingsValue}>{formatWaterVolume(potentialMonthlySaving)}</Text>
+          <Text style={styles.summaryTitle}>Potential Savings</Text>
+          <Text style={styles.savingsValue}>{formatWaterVolume(potentialSaving)}</Text>
           <Text style={styles.summarySubtitle}>if you complete all tasks</Text>
         </View>
 

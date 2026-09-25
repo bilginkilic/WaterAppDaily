@@ -11,6 +11,11 @@ export async function syncProfileToServer() {
     return { synced: false, reason: 'not_authenticated' };
   }
 
+  const owner = await DataService.getDataOwner();
+  if (owner && owner !== String(userData.userId)) {
+    return { synced: false, reason: 'owner_mismatch' };
+  }
+
   const surveyCompleted = await DataService.isSurveyCompleted();
   if (!surveyCompleted) {
     return { synced: false, reason: 'survey_not_completed' };

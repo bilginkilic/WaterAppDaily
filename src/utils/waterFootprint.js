@@ -17,3 +17,23 @@ export function sumSurveyValueTotals(answers) {
     0
   );
 }
+
+/**
+ * Potential saving if every open task were completed: for each Task answer, the
+ * largest valueSaving among that question's Achievement options. This is the same
+ * amount computeCurrentFootprint deducts when the task is completed via a challenge,
+ * so the results screen, profile and challenges all agree.
+ */
+export function computePotentialSaving(taskAnswers, questionList) {
+  const byId = new Map((questionList || []).map((q) => [q.id, q]));
+  return (taskAnswers || [])
+    .filter((answer) => answer.type === 'Task')
+    .reduce((sum, answer) => {
+      const question = byId.get(answer.questionId);
+      if (!question) return sum;
+      const best = question.options
+        .filter((o) => o.type === 'Achievement')
+        .reduce((max, o) => Math.max(max, Number(o.valueSaving) || 0), 0);
+      return sum + best;
+    }, 0);
+}

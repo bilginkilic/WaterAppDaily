@@ -6,11 +6,13 @@
   (package/applicationId was changed from `com.waterappdaily` to `com.waterappdaily2`;
   this created a fresh app listing on Play Console, unrelated to the old `com.waterappdaily` entry)
 - Console URL: https://play.google.com/console/u/0/developers/6397007510742584509/app/4974981398468154068/app-dashboard
-- Current versionCode: 6, versionName: 1.4 (app.json shows 1.3.0 — keep these in sync when bumping)
+- Current versionCode: 7, versionName: 1.4.1 in `android/app/build.gradle` and `app.json` (Play last received
+  versionCode 6 / 1.4 — keep both files in sync when bumping)
 - **Production track: Inactive** — app is NOT published/live yet.
 - Release signing config reads keystore info from env vars (`WATERAPP2_STORE_FILE`,
   `WATERAPP2_STORE_PASSWORD`, `WATERAPP2_KEY_ALIAS`, `WATERAPP2_KEY_PASSWORD`) instead of
-  hardcoded values in `android/app/build.gradle`.
+  hardcoded values in `android/app/build.gradle`. `applicationId` is `com.waterappdaily2`; the Kotlin
+  `namespace` stays `com.waterappdaily`.
 
 ### Path to production
 
@@ -37,3 +39,12 @@ be met and "Apply for production" can be unlocked on the Dashboard.
 - Track opt-in count on the Dashboard ("X testers currently opted in") until it reaches 12+.
 - Once 12+ testers have been opted-in continuously for 14 days, "Apply for production"
   becomes clickable — use it to submit for production review.
+
+## Dev environment (do not test against the live challenge)
+
+- Dev API: https://waterappdashboard2-dev.onrender.com (Render free service `waterappdashboard2-dev`,
+  deploys the `claude/magical-lamport-rzugbe` branch of WaterAppDashboard2, separate Firebase project).
+- `npm run android:dev` builds `android/app/build/outputs/apk/staging/app-staging.apk`: package
+  `com.waterappdaily2.dev`, name "WaterApp DEV", talks to the dev API, installs next to the store app.
+  Debug-signed; share the APK directly, never upload it to Play.
+- `src/config/apiEnv.js` must stay `'prod'` in git (a jest test enforces it).
