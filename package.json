@@ -17,7 +17,8 @@
     "test:smoke": "jest __tests__/smoke.test.js",
     "test:integrity": "jest __tests__/integrity.questions.test.js",
     "test:e2e": "jest __tests__/e2e.flow.test.js __tests__/userFlow",
-    "test:live": "API_URL=${API_URL:-http://localhost:3001/api} jest __tests__/apiIntegration.test.js __tests__/userFlow.api.test.js"
+    "test:live": "API_URL=${API_URL:-http://localhost:3001/api} jest __tests__/apiIntegration.test.js __tests__/userFlow.api.test.js",
+    "android:dev": "node scripts/build-android-dev.js"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^1.21.0",

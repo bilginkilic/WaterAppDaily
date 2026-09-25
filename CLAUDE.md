@@ -39,3 +39,12 @@ be met and "Apply for production" can be unlocked on the Dashboard.
 - Track opt-in count on the Dashboard ("X testers currently opted in") until it reaches 12+.
 - Once 12+ testers have been opted-in continuously for 14 days, "Apply for production"
   becomes clickable — use it to submit for production review.
+
+## Dev environment (do not test against the live challenge)
+
+- Dev API: https://waterappdashboard2-dev.onrender.com (Render free service `waterappdashboard2-dev`,
+  deploys the `claude/magical-lamport-rzugbe` branch of WaterAppDashboard2, separate Firebase project).
+- `npm run android:dev` builds `android/app/build/outputs/apk/staging/app-staging.apk`: package
+  `com.waterappdaily2.dev`, name "WaterApp DEV", talks to the dev API, installs next to the store app.
+  Debug-signed; share the APK directly, never upload it to Play.
+- `src/config/apiEnv.js` must stay `'prod'` in git (a jest test enforces it).

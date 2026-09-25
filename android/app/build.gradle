@@ -114,6 +114,16 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+        // Test build against the dev API: installs next to the store app.
+        // Built with `npm run android:dev`; debug-signed, never uploaded to Play.
+        // App name comes from src/staging/res (build-type resources override main).
+        staging {
+            initWith release
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
     }
 
     configurations.all {
